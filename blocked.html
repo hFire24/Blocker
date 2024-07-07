@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Website Blocked</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #70101e;
+    }
+    .blocked-message {
+      text-align: center;
+    }
+    .blocked-message h1 {
+      font-size: 2rem;
+      color: #ccc;
+    }
+    .blocked-message p {
+      font-size: 1rem;
+      color: #999;
+    }
+    .blocked-message button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      color: #70101e;
+      background-color: #ccc;
+      border: none;
+      cursor: pointer;
+    }
+    .blocked-message button:hover {
+      background-color: #bbb;
+    }
+  </style>
+</head>
+<body>
+  <div class="blocked-message">
+    <h1>Website Blocked</h1>
+    <p>The website you are trying to visit is blocked.</p>
+    <button id="unblockButton">Unblock and Continue</button>
+  </div>
+  <script src="blocked.js"></script>
+</body>
+</html>

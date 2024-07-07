@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Website Blocker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      width: 250px; /* Set the width of the popup */
+      padding: 10px;
+    }
+    button {
+      margin-top: 10px;
+      width: 100%; /* Make the buttons take the full width */
+    }
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+    li {
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .disabled {
+      text-decoration: line-through;
+    }
+    input[type="checkbox"] {
+      margin-right: 10px; /* Add some space between checkbox and URL */
+    }
+  </style>
+</head>
+<body>
+  <h1>Website Blocker</h1>
+  <h2 id="blockStatus"></h2>
+  <button id="toggleBlocker">Enable Blocker</button>
+  <button id="openOptions">Options</button>
+  <ul id="blockedSitesList" style="display: none;"></ul>
+
+  <script src="popup.js"></script>
+</body>
+</html>
