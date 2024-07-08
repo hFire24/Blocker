@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const toggleBlockerButton = document.getElementById('toggleBlocker');
   const openOptionsButton = document.getElementById('openOptions');
+  const openHelpButton = document.getElementById('openHelp');
   const blockStatusHeading = document.getElementById('blockStatus');
   const blockedList = document.getElementById('blockedSitesList');
 
@@ -29,6 +30,10 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.runtime.openOptionsPage();
   });
 
+  openHelpButton.addEventListener('click', () => {
+    window.open('help.html', '_blank');
+  });
+
   function updateButton(blockerEnabled) {
     toggleBlockerButton.textContent = blockerEnabled ? 'Disable Blocker' : 'Enable Blocker';
     blockStatusHeading.textContent = blockerEnabled ? 'ENABLED' : 'DISABLED';
@@ -39,42 +44,61 @@ document.addEventListener('DOMContentLoaded', () => {
     if (blockerEnabled) {
       blockedList.style.display = 'block';
       blocked.forEach(item => {
-        addItemToList(item, enabled.includes(item));
+        const isEnabled = enabled.includes(item);
+        addListItem(item, isEnabled);
       });
     } else {
       blockedList.style.display = 'none';
     }
   }
 
-  function addItemToList(url, isEnabled) {
+  function getDisplayText(pattern) {
+    let displayText = pattern;
+    if (pattern.startsWith('^https?://')) {
+      displayText = displayText.replace("^https?://+([^:/]+\\.)?", '');
+      displayText = displayText.replace(/\\./g, '.');
+      displayText = displayText.replace("[:/]", '');
+    } else if (pattern.startsWith('(?:q|s|search_query)=')) {
+      displayText = displayText.replace("(?:q|s|search_query)=(.*", '');
+      displayText = displayText.replace("[^&]*)", '');
+    }
+    return displayText;
+  }  
+
+  function addListItem(pattern, isEnabled) {
     const listItem = document.createElement('li');
-    listItem.textContent = url;
+
+    const itemText = document.createElement('span');
+    const type = pattern.includes('^https?://') ? '🌐' : '🔍';
+    const displayText = getDisplayText(pattern);
+    itemText.textContent = `${type} ${displayText}`;
     if (!isEnabled) {
-      listItem.classList.add('disabled');
+      itemText.classList.add('disabled');
     }
 
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.checked = isEnabled;
     checkbox.addEventListener('change', () => {
-      toggleItem(url, checkbox.checked, listItem);
+      toggleItem(pattern, checkbox.checked, itemText);
     });
 
     listItem.prepend(checkbox);
+    listItem.appendChild(itemText);
     blockedList.appendChild(listItem);
   }
 
-  function toggleItem(url, isEnabled, listItem) {
+  function toggleItem(pattern, isEnabled, itemText) {
     chrome.storage.sync.get('enabled', (data) => {
       let enabled = data.enabled || [];
       if (isEnabled) {
-        if (!enabled.includes(url)) {
-          enabled.push(url);
+        if (!enabled.includes(pattern)) {
+          enabled.push(pattern);
         }
-        listItem.classList.remove('disabled');
+        itemText.classList.remove('disabled');
       } else {
-        enabled = enabled.filter(item => item !== url);
-        listItem.classList.add('disabled');
+        enabled = enabled.filter(item => item !== pattern);
+        itemText.classList.add('disabled');
       }
       chrome.storage.sync.set({ enabled });
     });
