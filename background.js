@@ -4,7 +4,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       const blocked = data.blocked || [];
       const enabled = data.enabled || [];
       const blockerEnabled = data.blockerEnabled !== false; // default to true if not set
-      const fullUrl = tab.url;
+      const fullUrl = tab.url.toLowerCase();
 
       const isBlocked = blocked.some(blockedItem => {
         try {

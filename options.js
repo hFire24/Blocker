@@ -4,8 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const addUrlButton = document.getElementById('addUrlButton');
   const typeSelect = document.getElementById('typeSelect');
   const openHelpButton = document.getElementById('openHelp');
-  const loadExample1Button = document.getElementById('loadExample1');
-  const loadExample2Button = document.getElementById('loadExample2');
+  const loadWebsiteButton = document.getElementById('loadWebsite');
+  const loadKeywordButton = document.getElementById('loadKeyword');
 
   // Load blocked items from storage
   chrome.storage.sync.get(['blocked', 'enabled'], (data) => {
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   addUrlButton.addEventListener('click', () => {
-    const url = addUrlInput.value.trim();
+    const url = addUrlInput.value.trim().toLowerCase();
     const type = typeSelect.value;
     if (url) {
       addBlockedPattern(url, type);
@@ -29,12 +29,12 @@ document.addEventListener('DOMContentLoaded', () => {
     window.open('help.html', '_blank');
   });
 
-  loadExample1Button.addEventListener('click', () => {
+  loadWebsiteButton.addEventListener('click', () => {
     addUrlInput.value = 'example.com';
     typeSelect.value = 'website';
   });
 
-  loadExample2Button.addEventListener('click', () => {
+  loadKeywordButton.addEventListener('click', () => {
     addUrlInput.value = 'example';
     typeSelect.value = 'keyword';
   });

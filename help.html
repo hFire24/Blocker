@@ -4,28 +4,85 @@
   <title>Help - Website Blocker</title>
   <meta charset="UTF-8">
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
+    body { font-family: Arial, sans-serif; margin: 20px; font-size: 1rem; }
+    h1, h2, p, ul { margin-bottom: 15px; }
+    .font-size-options { margin-bottom: 20px; }
+    .toc { margin-bottom: 20px; }
+    .font-size-button { border: 1px solid #ccc; padding: 5px 10px; cursor: pointer; margin-right: 10px; }
+    .font-size-button.selected { background-color: #007bff; color: #fff; }
   </style>
 </head>
 <body>
   <h1>Website Blocker Help</h1>
-  <p>Welcome to the Website Blocker extension! Here are the instructions on how to use it:</p>
-  <h2>Blocking URLs</h2>
-  <p>To block a URL, go to the Options page, enter the URL or a regular expression pattern in the input box, and click "Add URL". The URL will be added to the blocked list.</p>
-  <h2>Unblocking URLs</h2>
-  <p>To unblock a URL, uncheck the checkbox next to the URL on the Options page. The URL will be removed from the enabled list but will remain in the blocked list for future reference.</p>
-  <h2>Testing Regular Expressions</h2>
-  <p>You can test your regular expressions by going to the Testing page, entering a regex pattern and a URL, and clicking "Test". You will see a message indicating whether the URL matches the pattern.</p>
-  <h2>Toggling the Blocker</h2>
-  <p>You can enable or disable the blocker from the popup. Click the "Enable Blocker" or "Disable Blocker" button to toggle the blocker status.</p>
-  <h2>Options Page</h2>
-  <p>From the popup, you can open the Options page to manage your blocked URLs.</p>
-  <h2>Examples</h2>
-  <p>Here are some examples of regex patterns you can use:</p>
+  <div class="font-size-options">
+    <strong>Font Size:</strong>
+    <button class="font-size-button" data-size="0.75rem" style="font-size: 0.75rem;">Aa</button>
+    <button class="font-size-button selected" data-size="1rem" style="font-size: 1rem;">Aa</button>
+    <button class="font-size-button" data-size="1.25rem" style="font-size: 1.25rem;">Aa</button>
+    <button class="font-size-button" data-size="1.5rem" style="font-size: 1.5rem;">Aa</button>
+  </div>
+
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+      <li><a href="#blocking-urls">Blocking URLs</a></li>
+      <li><a href="#types-of-blocks">Types of Blocks</a></li>
+      <li><a href="#unblocking-urls">Unblocking URLs</a></li>
+      <li><a href="#toggling-the-blocker">Toggling the Blocker</a></li>
+      <li><a href="#options-page">Options Page</a></li>
+      <li><a href="#examples">Examples</a></li>
+    </ul>
+  </div>
+
+  <h2 id="blocking-urls">Blocking URLs</h2>
+  <p>To block a URL, follow these steps:</p>
   <ul>
-    <li><strong>Block the website example.com:</strong> <code>^https?://+([^:/]+\\.)?example\\.com[:/]</code></li>
-    <li><strong>Block all search queries containing the word "example":</strong> <code>.*example.*</code></li>
+    <li>Go to the <a href="options.html" target="_blank">Options page</a>.</li>
+    <li>Enter the URL or keyword you want to block in the input box.</li>
+    <li>Select the type of block: <strong>Website</strong> or <strong>Keyword</strong>.</li>
+    <li>Click the "Add" button to add the URL or keyword to the blocked list.</li>
   </ul>
+
+  <h2 id="types-of-blocks">Types of Blocks</h2>
+  <p>There are two types of blocks you can use:</p>
+  <ul>
+    <li><strong>Website 🌐:</strong> This option blocks specific websites. For example, to block <code>example.com</code>, it will be converted to a pattern that matches URLs like <code>https://example.com</code>.</li>
+    <li><strong>Keyword 🔍:</strong> This option blocks search queries containing specific keywords. For example, to block searches containing the word "example", it will be converted to a pattern that matches URLs like <code>search?q=example</code> or <code>search_query=example</code>.</li>
+  </ul>
+
+  <h2 id="unblocking-urls">Unblocking URLs</h2>
+  <p>To unblock a URL or keyword, there are three ways:</p>
+  <ul>
+    <li><strong>From the Popup:</strong> Open the extension popup, find the URL or keyword in the list, and uncheck the checkbox next to it to disable it.</li>
+    <li><strong>From the Options Page:</strong> Go to the <a href="options.html" target="_blank">Options page</a>, find the URL or keyword in the list, and uncheck the checkbox next to it to disable it, or click the "Delete" button to remove it from the list entirely.</li>
+    <li><strong>From the Blocked Page:</strong> When a website is blocked, you will see a blocked page. Click the "Unblock and Continue" button on this page to disable all URLs and keywords that caused the block. Upon doing so, you will be redirected to the page that was originally blocked.</li>
+  </ul>
+
+  <h2 id="toggling-the-blocker">Toggling the Blocker</h2>
+  <p>You can enable or disable the blocker from the popup:</p>
+  <ul>
+    <li>Click the "Enable Blocker" or "Disable Blocker" button to toggle the blocker status.</li>
+    <li>The current status of the blocker (ENABLED or DISABLED) will be displayed at the top of the popup.</li>
+  </ul>
+
+  <h2 id="options-page">Options Page</h2>
+  <p>You can manage your blocked URLs and keywords from the <a href="options.html" target="_blank">Options page</a>:</p>
+  <ul>
+    <li>Use the input box and dropdown menu to add new blocks.</li>
+    <li>Use the checkboxes to enable or disable existing blocks.</li>
+    <li>Use the "Delete" button to remove blocks.</li>
+    <li>Use the "Load Example 1" and "Load Example 2" buttons to load example blocks.</li>
+  </ul>
+
+  <h2 id="examples">Examples</h2>
+  <p>Here are some examples of patterns you can use:</p>
+  <ul>
+    <li><strong>Block the website example.com:</strong> Enter <code>example.com</code> and select <strong>Website</strong>.</li>
+    <li><strong>Block all search queries containing the word "example":</strong> Enter <code>example</code> and select <strong>Keyword</strong>.</li>
+  </ul>
+
   <p>If you have any questions or need further assistance, please contact support.</p>
+
+  <script src="fontSize.js"></script>
 </body>
 </html>
