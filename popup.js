@@ -5,13 +5,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const blockStatusHeading = document.getElementById('blockStatus');
   const blockedList = document.getElementById('blockedSitesList');
 
-  // Load the current state of the blocker and blocked items
-  chrome.storage.sync.get(['blockerEnabled', 'blocked', 'enabled'], (data) => {
+  // Load the current state of the blocker and favorited blocked items
+  chrome.storage.sync.get(['blockerEnabled', 'enabled', 'favorites'], (data) => {
     const blockerEnabled = data.blockerEnabled !== false; // default to true if not set
-    const blocked = data.blocked || [];
     const enabled = data.enabled || [];
+    const favorites = data.favorites || [];
     updateButton(blockerEnabled);
-    updateBlockedList(blockerEnabled, blocked, enabled);
+    updateBlockedList(blockerEnabled, favorites, enabled);
   });
 
   toggleBlockerButton.addEventListener('click', () => {
@@ -19,8 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const blockerEnabled = data.blockerEnabled !== false; // default to true if not set
       chrome.storage.sync.set({ blockerEnabled: !blockerEnabled }, () => {
         updateButton(!blockerEnabled);
-        chrome.storage.sync.get(['blocked', 'enabled'], (data) => {
-          updateBlockedList(!blockerEnabled, data.blocked || [], data.enabled || []);
+        chrome.storage.sync.get(['favorites', 'enabled'], (data) => {
+          updateBlockedList(!blockerEnabled, data.favorites || [], data.enabled || []);
         });
       });
     });
@@ -39,11 +39,11 @@ document.addEventListener('DOMContentLoaded', () => {
     blockStatusHeading.textContent = blockerEnabled ? 'ENABLED' : 'DISABLED';
   }
 
-  function updateBlockedList(blockerEnabled, blocked, enabled) {
+  function updateBlockedList(blockerEnabled, favorites, enabled) {
     blockedList.innerHTML = '';
     if (blockerEnabled) {
       blockedList.style.display = 'block';
-      blocked.forEach(item => {
+      favorites.forEach(item => {
         const isEnabled = enabled.includes(item);
         addListItem(item, isEnabled);
       });
