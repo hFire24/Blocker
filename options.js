@@ -287,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.sync.get(['blocked', 'enabled', 'favorites'], (data) => {
       const blocked = data.blocked.filter(item => item !== pattern);
       const enabled = data.enabled.filter(item => item !== pattern);
-      const favorites = data.enabled.filter(item => item !== pattern)
+      const favorites = data.favorites.filter(item => item !== pattern)
       chrome.storage.sync.set({ blocked, enabled, favorites }, () => {
         listItem.remove();
       });
