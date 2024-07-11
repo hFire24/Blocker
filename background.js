@@ -35,7 +35,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 });
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+/*chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'unblockSite') {
     chrome.storage.sync.get(['lastBlockedUrl', 'blocked', 'enabled'], (data) => {
       const lastBlockedUrl = data.lastBlockedUrl;
@@ -69,4 +69,4 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
     });
   }
-});
+});*/
