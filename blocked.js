@@ -1,12 +1,24 @@
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('unblockButton').addEventListener('click', () => {
-    //chrome.runtime.sendMessage({ action: 'unblockSite' });
-    chrome.storage.sync.get(['lastBlockedUrl', 'blocked', 'enabled'], (data) => {
-      const lastBlockedUrl = data.lastBlockedUrl;
-      const blocked = data.blocked || [];
-      const enabled = data.enabled || [];
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'setBlockedUrl') {
+    sessionStorage.setItem('lastBlockedUrl', message.url);
+  }
+});
 
-      if (lastBlockedUrl) {
+document.addEventListener('DOMContentLoaded', () => {
+  function closeTab() {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      chrome.tabs.remove(tabs[0].id);
+    });
+  }
+
+  document.getElementById('unblockButton').addEventListener('click', () => {
+    const lastBlockedUrl = sessionStorage.getItem('lastBlockedUrl');
+
+    if (lastBlockedUrl) {
+      chrome.storage.sync.get(['blocked', 'enabled'], (data) => {
+        const blocked = data.blocked || [];
+        const enabled = data.enabled || [];
+
         let toUnblock = [];
 
         // Check blocked list for regex matches
@@ -25,23 +37,18 @@ document.addEventListener('DOMContentLoaded', () => {
         let newEnabled = enabled.filter(enabledItem => !toUnblock.includes(enabledItem));
 
         chrome.storage.sync.set({ enabled: newEnabled }, () => {
-          chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            chrome.tabs.update(tabs[0].id, { url: lastBlockedUrl }, () => {
-              // Clear the lastBlockedUrl after the site is unblocked and redirected
-              chrome.storage.sync.remove('lastBlockedUrl');
-            });
-          })
+          chrome.tabs.update({ url: lastBlockedUrl }, () => {
+            sessionStorage.removeItem('lastBlockedUrl');
+          });
         });
-      }
-    });
+      });
+    } else {
+      closeTab();
+    }
   });
 
   document.getElementById('focusButton').addEventListener('click', () => {
-    chrome.storage.sync.remove('lastBlockedUrl', () => {
-      // Close the current tab
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        chrome.tabs.remove(tabs[0].id);
-      });
-    });
+    sessionStorage.removeItem('lastBlockedUrl');
+    closeTab();
   });
 });

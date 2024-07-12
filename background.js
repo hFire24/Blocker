@@ -1,5 +1,12 @@
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'loading' && tab.url) {
+  if (changeInfo.status === 'complete' && tab.url && tab.url.startsWith(chrome.runtime.getURL("blocked.html"))) {
+    chrome.storage.sync.get(['lastBlockedUrl'], (data) => {
+      if (data.lastBlockedUrl) {
+        chrome.tabs.sendMessage(tabId, { action: 'setBlockedUrl', url: data.lastBlockedUrl });
+        chrome.storage.sync.remove('lastBlockedUrl');
+      }
+    });
+  } else if (changeInfo.status === 'loading' && tab.url) {
     chrome.storage.sync.get(['blocked', 'enabled', 'blockerEnabled'], (data) => {
       const blocked = data.blocked || [];
       const enabled = data.enabled || [];
