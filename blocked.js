@@ -6,6 +6,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 document.addEventListener('DOMContentLoaded', () => {
   function closeTab() {
+    sessionStorage.removeItem('lastBlockedUrl');
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       chrome.tabs.remove(tabs[0].id);
     });
@@ -47,8 +48,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  document.getElementById('focusButton').addEventListener('click', () => {
-    sessionStorage.removeItem('lastBlockedUrl');
-    closeTab();
-  });
+  document.getElementById('focusButton').addEventListener('click', closeTab);
 });
