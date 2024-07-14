@@ -24,17 +24,29 @@
       font-size: 1rem;
       color: #999;
     }
-    .blocked-message button {
+    .blocked-message .unblock-button {
       margin-top: 20px;
       padding: 10px 20px;
       font-size: 1rem;
-      color: #70101e;
-      /*background-color: #ccc;*/
+      color: #ffffff;
+      background-color: #28a745; /* Green background for the unblock button */
       border: none;
       cursor: pointer;
     }
-    .blocked-message button:hover {
-      background-color: #bbb;
+    .blocked-message .unblock-button:hover {
+      background-color: #218838;
+    }
+    .blocked-message .focus-button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      color: #ffffff;
+      background-color: #dc3545; /* Red background for the remain focused button */
+      border: none;
+      cursor: pointer;
+    }
+    .blocked-message .focus-button:hover {
+      background-color: #c82333;
     }
   </style>
 </head>
@@ -42,8 +54,8 @@
   <div class="blocked-message">
     <h1>Website Blocked</h1>
     <p>The website you are trying to visit is blocked.</p>
-    <button id="unblockButton">🔓 Unblock and Continue</button>
-    <button id="focusButton">🔒 Remain Focused</button>
+    <button id="unblockButton" class="unblock-button">🔓 Unblock and Continue</button>
+    <button id="focusButton" class="focus-button">🔒 Remain Focused</button>
   </div>
   <script src="blocked.js"></script>
 </body>
