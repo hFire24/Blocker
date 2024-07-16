@@ -24,29 +24,60 @@
       font-size: 1rem;
       color: #999;
     }
-    .blocked-message .unblock-button {
+    .blocked-message .unblock-button,
+    .blocked-message .focus-button,
+    .blocked-message .confirm-unblock-button,
+    .blocked-message .cancel-unblock-button,
+    .blocked-message .submit-reason-button {
       margin-top: 20px;
       padding: 10px 20px;
       font-size: 1rem;
       color: #ffffff;
-      background-color: #28a745; /* Green background for the unblock button */
       border: none;
       cursor: pointer;
+    }
+    .blocked-message .unblock-button {
+      background-color: #28a745; /* Green background for the unblock button */
     }
     .blocked-message .unblock-button:hover {
       background-color: #218838;
     }
     .blocked-message .focus-button {
-      margin-top: 20px;
-      padding: 10px 20px;
-      font-size: 1rem;
-      color: #ffffff;
       background-color: #dc3545; /* Red background for the remain focused button */
-      border: none;
-      cursor: pointer;
     }
     .blocked-message .focus-button:hover {
       background-color: #c82333;
+    }
+    .blocked-message .confirm-unblock-button {
+      background-color: #007bff; /* Blue background for the confirm button */
+    }
+    .blocked-message .confirm-unblock-button:hover {
+      background-color: #0056b3;
+    }
+    .blocked-message .cancel-unblock-button {
+      background-color: #6c757d; /* Grey background for the cancel button */
+    }
+    .blocked-message .cancel-unblock-button:hover {
+      background-color: #5a6268;
+    }
+    .blocked-message .submit-reason-button {
+      background-color: #ffc107; /* Yellow background for the submit reason button */
+      color: black;
+    }
+    .blocked-message .submit-reason-button:hover {
+      background-color: #e0a800;
+    }
+    .reason-input,
+    .confirm-message {
+      display: none;
+      margin-top: 20px;
+      color: #ccc;
+    }
+    .reason-input input {
+      padding: 10px;
+      font-size: 1rem;
+      width: 80%;
+      max-width: 300px;
     }
   </style>
 </head>
@@ -54,8 +85,21 @@
   <div class="blocked-message">
     <h1>Website Blocked</h1>
     <p>The website you are trying to visit is blocked.</p>
-    <button id="unblockButton" class="unblock-button">🔓 Unblock and Continue</button>
-    <button id="focusButton" class="focus-button">🔒 Remain Focused</button>
+    <div class="default-buttons">
+      <button id="unblockButton" class="unblock-button">🔓 Unblock and Continue</button>
+      <button id="focusButton" class="focus-button">🔒 Remain Focused</button>
+    </div>
+    <div class="reason-input">
+      <p>Why are you unblocking this site?</p>
+      <input type="text" id="reason" placeholder="Insert reason here">
+      <button id="submitReasonButton" class="submit-reason-button">Submit</button>
+      <button id="cancelReasonButton" class="cancel-unblock-button">Close</button>
+    </div>
+    <div class="confirm-message">
+      <p id="confirmText"></p>
+      <button id="confirmUnblockButton" class="confirm-unblock-button">Yes, Unblock</button>
+      <button id="cancelUnblockButton" class="cancel-unblock-button">Cancel</button>
+    </div>
   </div>
   <script src="blocked.js"></script>
 </body>
