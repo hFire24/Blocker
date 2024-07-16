@@ -28,11 +28,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   openOptionsButton.addEventListener('click', () => {
-    chrome.runtime.openOptionsPage();
+    window.open('blocking.html', '_blank');
   });
 
   openSitesButton.addEventListener('click', () => {
-    window.open('sites.html', '_blank');
+    chrome.runtime.openOptionsPage();
   });
 
   openHelpButton.addEventListener('click', () => {

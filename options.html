@@ -1,28 +1,31 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Options - Website Blocker</title>
+  <title>Sites - Website Blocker</title>
   <meta charset="UTF-8">
   <style>
-    body { font-family: Arial, sans-serif; font-size: 1rem; }
+    body { font-family: Arial, sans-serif; }
+    ul { list-style-type: none; padding: 0; }
+    li { margin-bottom: 10px; display: flex; align-items: center; }
+    button { margin-left: 10px; }
+    .disabled { text-decoration: line-through; }
     input[type="checkbox"] { margin-right: 10px; }
+    select { margin-left: 10px; }
     .input-container { display: flex; flex-wrap: wrap; margin-bottom: 10px; }
     .input-container input, .input-container select, .input-container button { margin-right: 10px; }
-    .indented { margin-left: 20px; }
+    .drag-handle { cursor: move; margin-right: 10px; }
+    .edit-input { margin-right: 10px; }
+    .star { margin-right: 10px; font-size: 125%; }
   </style>
 </head>
 <body>
-  <h1>Options</h1>
-  <h2>Unblock Button</h2>
-  <div>
-    <input type="checkbox" checked id="enableConfirmMessage" />
-    <label for="enableConfirmMessage">Enable Confirm Message</label>
+  <h1>Blocked Sites</h1>
+  <div class="input-container">
+    <input type="text" id="addUrlInput" placeholder="Enter URL or Keyword">
+    <button id="addUrlButton">Add</button>
+    <button id="openHelp">Help</button>
   </div>
-  <div class="indented">
-    <input type="checkbox" checked id="enableReasonInput" />
-    <label for="enableReasonInput">Enable Reason Input</label>
-  </div>
-
-  <script src="options.js"></script>
+  <ul id="blockedSitesList"></ul>
+  <script src="sites.js"></script>
 </body>
 </html>

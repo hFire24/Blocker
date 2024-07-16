@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Options - Website Blocker</title>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 1rem; }
+    input[type="checkbox"] { margin-right: 10px; }
+    .input-container { display: flex; flex-wrap: wrap; margin-bottom: 10px; }
+    .input-container input, .input-container select, .input-container button { margin-right: 10px; }
+    .indented { margin-left: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Options</h1>
+  <h2>Unblock Button</h2>
+  <div>
+    <input type="checkbox" checked id="enableConfirmMessage" />
+    <label for="enableConfirmMessage">Enable Confirm Message</label>
+  </div>
+  <div class="indented">
+    <input type="checkbox" checked id="enableReasonInput" />
+    <label for="enableReasonInput">Enable Reason Input</label>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
