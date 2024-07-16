@@ -7,14 +7,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 document.addEventListener('DOMContentLoaded', () => {
   let enableConfirmMessage = true;
   let enableReasonInput = true;
+  let enableTimeInput = false;
   const length = window.history.length;
 
   // Load options
-  chrome.storage.sync.get(['enableConfirmMessage', 'enableReasonInput'], (data) => {
+  chrome.storage.sync.get(['enableConfirmMessage', 'enableReasonInput', 'enableTimeInput'], (data) => {
     enableConfirmMessage = (data.enableConfirmMessage !== undefined) ? data.enableConfirmMessage : true;
     enableReasonInput = (data.enableReasonInput !== undefined) ? data.enableReasonInput : true;
+    enableTimeInput = data.enableTimeInput || false;
+    updateUnblockButtonText();
   });
 
+  function updateUnblockButtonText() {
+    const unblockEmoji = document.getElementById("unblockEmoji");
+    if(enableReasonInput) {
+      unblockEmoji.innerText = "📝";
+    } else if(enableConfirmMessage) {
+      unblockEmoji.innerText = "❓";
+    } else if(enableTimeInput) {
+      unblockEmoji.innerText = "⏳";
+    } else {
+      unblockEmoji.innerText = "🔓";
+    }
+  }
+  
   function goBackOrCloseTab() {
     if(length <= 3) {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
