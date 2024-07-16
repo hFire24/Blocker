@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let enableConfirmMessage = true;
   let enableReasonInput = true;
   let enableTimeInput = false;
-  const length = window.history.length;
 
   // Load options
   chrome.storage.sync.get(['enableConfirmMessage', 'enableReasonInput', 'enableTimeInput'], (data) => {
@@ -31,14 +30,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  function goBackOrCloseTab() {
-    if(length <= 3) {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        chrome.tabs.remove(tabs[0].id);
-      });
-    } else {
-      window.history.go(-2);
-    }
+  function closeTab() {
+    sessionStorage.removeItem('lastBlockedUrl');
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      chrome.tabs.remove(tabs[0].id);
+    });
   }
 
   function unblockSite() {
@@ -73,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       });
     } else {
-      goBackOrCloseTab();
+      closeTab();
     }
   }
 
@@ -105,11 +101,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('unblockButton').addEventListener('click', showReasonInput);
 
-  document.getElementById('focusButton').addEventListener('click', goBackOrCloseTab);
+  document.getElementById('focusButton').addEventListener('click', closeTab);
 
   document.getElementById('submitReasonButton').addEventListener('click', () => submitReason());
 
-  document.getElementById('cancelReasonButton').addEventListener('click', goBackOrCloseTab);
+  document.getElementById('cancelReasonButton').addEventListener('click', closeTab);
 
   document.getElementById('reason').addEventListener('keypress', (event) => {
     if (event.key === 'Enter') {
@@ -119,5 +115,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('confirmUnblockButton').addEventListener('click', unblockSite);
 
-  document.getElementById('cancelUnblockButton').addEventListener('click', goBackOrCloseTab);
+  document.getElementById('cancelUnblockButton').addEventListener('click', closeTab);
 });
