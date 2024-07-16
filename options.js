@@ -4,8 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load saved options
   chrome.storage.sync.get(['enableConfirmMessage', 'enableReasonInput'], (data) => {
-    confirmMessage.checked = data.enableConfirmMessage || false;
-    reasonInput.checked = data.enableReasonInput || false;
+    confirmMessage.checked = (data.enableConfirmMessage !== undefined) ? data.enableConfirmMessage : true;
+    reasonInput.checked = (data.enableReasonInput !== undefined) ? data.enableReasonInput : true;
     updateCheckboxState();
   });
 

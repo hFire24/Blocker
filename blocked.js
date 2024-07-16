@@ -5,14 +5,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-  let enableConfirmMessage = false;
-  let enableReasonInput = false;
-  let length = window.history.length;
+  let enableConfirmMessage = true;
+  let enableReasonInput = true;
+  const length = window.history.length;
 
   // Load options
   chrome.storage.sync.get(['enableConfirmMessage', 'enableReasonInput'], (data) => {
-    enableConfirmMessage = data.enableConfirmMessage || false;
-    enableReasonInput = data.enableReasonInput || false;
+    enableConfirmMessage = (data.enableConfirmMessage !== undefined) ? data.enableConfirmMessage : true;
+    enableReasonInput = (data.enableReasonInput !== undefined) ? data.enableReasonInput : true;
   });
 
   function goBackOrCloseTab() {
