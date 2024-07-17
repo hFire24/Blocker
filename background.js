@@ -34,46 +34,35 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       });
 
       if (blockerEnabled && isBlocked && isEnabled) {
-        chrome.storage.sync.set({ lastBlockedUrl: fullUrl }, () => {
-          chrome.tabs.update(tabId, { url: chrome.runtime.getURL("blocked.html") });
-        });
-      }
-    });
-  }
-});
-
-/*chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'unblockSite') {
-    chrome.storage.sync.get(['lastBlockedUrl', 'blocked', 'enabled'], (data) => {
-      const lastBlockedUrl = data.lastBlockedUrl;
-      const blocked = data.blocked || [];
-      const enabled = data.enabled || [];
-
-      if (lastBlockedUrl) {
-        let toUnblock = [];
-
-        // Check blocked list for regex matches
-        blocked.forEach(blockedItem => {
+        const matchingEnabledItem = enabled.find(enabledItem => {
           try {
-            const regex = new RegExp(blockedItem);
-            if (regex.test(lastBlockedUrl)) {
-              toUnblock.push(blockedItem);
-            }
+            const regex = new RegExp(enabledItem);
+            return regex.test(fullUrl);
           } catch (e) {
-            console.error('Invalid regex pattern:', blockedItem);
+            console.error('Invalid regex pattern:', enabledItem);
+            return false;
           }
         });
 
-        // Remove from the enabled list
-        let newEnabled = enabled.filter(enabledItem => !toUnblock.includes(enabledItem));
+        chrome.storage.sync.get(['blockedCounts'], (data) => {
+          const today = new Date().toISOString().split('T')[0];
+          let blockedCounts = data.blockedCounts || {};
+          if (!blockedCounts[today]) {
+            blockedCounts[today] = {};
+          }
+          const key = matchingEnabledItem || fullUrl;
+          if (!blockedCounts[today][key]) {
+            blockedCounts[today][key] = 0;
+          }
+          blockedCounts[today][key]++;
 
-        chrome.storage.sync.set({ enabled: newEnabled }, () => {
-          chrome.tabs.update(sender.tab.id, { url: lastBlockedUrl }, () => {
-            // Clear the lastBlockedUrl after the site is unblocked and redirected
-            chrome.storage.sync.remove('lastBlockedUrl');
+          chrome.storage.sync.set({ blockedCounts }, () => {
+            chrome.storage.sync.set({ lastBlockedUrl: fullUrl }, () => {
+              chrome.tabs.update(tabId, { url: chrome.runtime.getURL("blocked.html") });
+            });
           });
         });
       }
     });
   }
-});*/
+});
