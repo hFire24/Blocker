@@ -27,8 +27,9 @@
     .blocked-message .unblock-button,
     .blocked-message .focus-button,
     .blocked-message .confirm-unblock-button,
-    .blocked-message .cancel-unblock-button,
-    .blocked-message .submit-reason-button {
+    .blocked-message .cancel-reason-button,
+    .blocked-message .submit-reason-button,
+    .blocked-message .unblock-time-button {
       margin-top: 20px;
       padding: 10px 20px;
       font-size: 1rem;
@@ -54,10 +55,10 @@
     .blocked-message .confirm-unblock-button:hover {
       background-color: #0056b3;
     }
-    .blocked-message .cancel-unblock-button {
+    .blocked-message .cancel-reason-button {
       background-color: #6c757d; /* Grey background for the cancel button */
     }
-    .blocked-message .cancel-unblock-button:hover {
+    .blocked-message .cancel-reason-button:hover {
       background-color: #5a6268;
     }
     .blocked-message .submit-reason-button {
@@ -67,8 +68,15 @@
     .blocked-message .submit-reason-button:hover {
       background-color: #e0a800;
     }
+    .blocked-message .unblock-time-button {
+      background-color: #28a745; /* Green background for the unblock time button */
+    }
+    .blocked-message .unblock-time-button:hover {
+      background-color: #218838;
+    }
     .reason-input,
-    .confirm-message {
+    .confirm-message,
+    .time-input {
       display: none;
       margin-top: 20px;
       color: #ccc;
@@ -78,6 +86,11 @@
       font-size: 1rem;
       width: 80%;
       max-width: 300px;
+    }
+    select, input[type=number] {
+      margin-top: 20px;
+      font-size: 1rem;
+      color: black;
     }
   </style>
 </head>
@@ -91,15 +104,30 @@
       <button id="focusButton" class="focus-button">🔒 Remain Focused</button>
     </div>
     <div class="reason-input">
-      <p>Why are you unblocking this site?</p>
+      <h2>Why are you unblocking this site?</h2>
       <input type="text" id="reason" placeholder="Insert reason here">
       <button id="submitReasonButton" class="submit-reason-button">Submit</button>
-      <button id="cancelReasonButton" class="cancel-unblock-button">Close</button>
+      <button id="cancelReasonButton" class="cancel-reason-button">Close</button>
     </div>
     <div class="confirm-message">
-      <p id="confirmText"></p>
-      <button id="confirmUnblockButton" class="confirm-unblock-button">Yes, Unblock</button>
-      <button id="cancelUnblockButton" class="cancel-unblock-button">Cancel</button>
+      <h2 id="confirmText"></h2>
+      <button id="confirmUnblockButton" class="confirm-unblock-button"><span id="unblockEmojiTwo">🔓</span> Yes, Unblock</button>
+      <button id="cancelUnblockButton" class="focus-button">🔒 Cancel</button>
+    </div>
+    <div class="time-input">
+      <h2>How long should this website be unblocked for?</h2>
+      <select id="unblockDuration">
+        <option value="1">1 minute</option>
+        <option value="5">5 minutes</option>
+        <option value="15">15 minutes</option>
+        <option value="30">30 minutes</option>
+        <option value="60">1 hour</option>
+        <option value="1440">1 day</option>
+        <option value="forever">Forever</option>
+        <option value="custom" selected>Custom (minutes)</option>
+      </select>
+      <input type="number" id="customDuration" placeholder="Enter minutes" min="1" max="1440" style="display:inline;">
+      <button id="unblockTimeButton" class="unblock-time-button">Unblock and Continue</button>
     </div>
   </div>
   <script src="blocked.js"></script>

@@ -28,13 +28,22 @@ document.addEventListener('DOMContentLoaded', () => {
   const blockedList = document.getElementById('blockedSitesList');
   const addUrlInput = document.getElementById('addUrlInput');
   const addUrlButton = document.getElementById('addUrlButton');
+
   const confirmMessage = document.getElementById('enableConfirmMessage');
   const reasonInput = document.getElementById('enableReasonInput');
+  const timeInput = document.getElementById('enableTimeInput');
+  const tempUnblocking = document.getElementById('enableTempUnblocking');
+  const tempUbOptions = document.getElementById('enableTempUbOptions');
+  const tempUbPopup = document.getElementById('enableTempUbPopup');
+  const ubDuration = document.getElementById('ubDuration');
 
   let draggedItem = null;
 
   // Load blocked items from storage
-  chrome.storage.sync.get(['blocked', 'enabled', 'favorites', 'enableConfirmMessage', 'enableReasonInput', 'blockedCounts'], (data) => {
+  chrome.storage.sync.get(['blocked', 'enabled', 'favorites', 
+  'enableConfirmMessage', 'enableReasonInput', 'enableTimeInput', 
+  'enableTempUnblocking', 'enableTempUbOptions', 'enableTempUbPopup', 'unblockDuration',
+  'blockedCounts'], (data) => {
     const blocked = data.blocked || [];
     const enabled = data.enabled || [];
     const favorites = data.favorites || [];
@@ -47,6 +56,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set blocking options
     confirmMessage.checked = data.enableConfirmMessage !== undefined ? data.enableConfirmMessage : true;
     reasonInput.checked = data.enableReasonInput !== undefined ? data.enableReasonInput : true;
+    timeInput.checked = data.enableTimeInput !== undefined ? data.enableTimeInput : false;
+    tempUnblocking.checked = data.enableTempUnblocking !== undefined ? data.enableTempUnblocking : false;
+    tempUbOptions.checked = data.enableTempUbOptions !== undefined ? data.enableTempUbOptions : false;
+    tempUbPopup.checked = data.enableTempUbPopup !== undefined ? data.enableTempUbPopup : false;
+    ubDuration.value = data.unblockDuration !== undefined ? data.unblockDuration : 60;
+
     updateCheckboxState();
 
     // Set table
@@ -96,21 +111,28 @@ document.addEventListener('DOMContentLoaded', () => {
   // Event listeners for blocking options
   confirmMessage.addEventListener('change', updateCheckboxState);
   reasonInput.addEventListener('change', saveOptions);
+  timeInput.addEventListener('change', saveOptions);
+  tempUnblocking.addEventListener('change', updateCheckboxState);
+  tempUbOptions.addEventListener('change', saveOptions);
+  tempUbPopup.addEventListener('change', saveOptions);
+  ubDuration.addEventListener('change', saveOptions);
 
   function updateCheckboxState() {
-    if (!confirmMessage.checked) {
-      reasonInput.checked = false;
-      reasonInput.disabled = true;
-    } else {
-      reasonInput.disabled = false;
-    }
+    reasonInput.disabled = !confirmMessage.checked ? true : false;
+    tempUbOptions.disabled = !tempUnblocking.checked ? true : false;
+    tempUbPopup.disabled = !tempUnblocking.checked ? true : false;
     saveOptions();
   }
 
   function saveOptions() {
     const enableConfirmMessage = confirmMessage.checked;
-    const enableReasonInput = reasonInput.checked;
-    chrome.storage.sync.set({ enableConfirmMessage, enableReasonInput });
+    const enableReasonInput = reasonInput.disabled ? false : reasonInput.checked;
+    const enableTimeInput = timeInput.checked;
+    const enableTempUnblocking = tempUnblocking.checked;
+    const enableTempUbOptions = tempUbOptions.disabled ? false : tempUbOptions.checked;
+    const enableTempUbPopup = tempUbPopup.disabled ? false : tempUbPopup.checked;
+    const unblockDuration = ubDuration.value;
+    chrome.storage.sync.set({ enableConfirmMessage, enableReasonInput, enableTimeInput, enableTempUnblocking, enableTempUbOptions, enableTempUbPopup, unblockDuration });
   }
 
   addUrlButton.addEventListener('click', () => {

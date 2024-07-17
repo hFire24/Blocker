@@ -77,3 +77,36 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     });
   }
 });
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'scheduleReblock') {
+    console.log("Schedule Reblock Called");
+    const { url, duration } = message;
+    scheduleReblock(url, duration);
+  }
+});
+
+function scheduleReblock(url, duration) {
+  setTimeout(() => {
+    chrome.storage.sync.get(['blocked', 'enabled'], (data) => {
+      const currentBlocked = data.blocked || [];
+      const currentEnabled = data.enabled || [];
+
+      // Check if the item is still in the blocked array
+      const stillBlocked = currentBlocked.some(blockedItem => {
+        try {
+          const regex = new RegExp(blockedItem);
+          return regex.test(url);
+        } catch (e) {
+          return false;
+        }
+      });
+
+      if (stillBlocked) {
+        // Re-block the URL if it is still in the blocked list
+        const updatedEnabled = currentEnabled.filter(item => item !== url);
+        chrome.storage.sync.set({ enabled: updatedEnabled });
+      }
+    });
+  }, duration * 60 * 1000); // convert minutes to milliseconds
+}
