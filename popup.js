@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
     checkbox.type = 'checkbox';
     checkbox.checked = isEnabled;
     checkbox.addEventListener('change', () => {
-      toggleItem(pattern, checkbox.checked, itemText);
+      toggleBlockedItem(pattern, checkbox.checked, itemText);
     });
 
     listItem.prepend(checkbox);
@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
     blockedList.appendChild(listItem);
   }
 
-  function toggleItem(pattern, isEnabled, itemText) {
+  function toggleBlockedItem(pattern, isEnabled, itemText) {
     chrome.storage.sync.get('enabled', (data) => {
       let enabled = data.enabled || [];
       if (isEnabled) {

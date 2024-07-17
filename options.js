@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-  //Tabs
+  // Tabs
   const sitesTab = document.getElementById('sitesTab');
   const blockingTab = document.getElementById('blockingTab');
   const pocketTab = document.getElementById('pocketTab');
@@ -46,6 +46,26 @@ document.addEventListener('DOMContentLoaded', () => {
     reasonInput.checked = data.enableReasonInput !== undefined ? data.enableReasonInput : true;
     updateCheckboxState();
   });
+
+  // Listen for changes in chrome.storage and update the blocked list in real time
+  chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'sync' && (changes.enabled || changes.blocked)) {
+      updateBlockedList();
+    }
+  });
+
+  function updateBlockedList() {
+    chrome.storage.sync.get(['blocked', 'enabled', 'favorites'], (data) => {
+      blockedList.innerHTML = '';
+      const blocked = data.blocked || [];
+      const enabled = data.enabled || [];
+      const favorites = data.favorites || [];
+
+      blocked.forEach(item => {
+        addItemToList(item, enabled.includes(item), favorites.includes(item));
+      });
+    });
+  }
 
   // Event listeners for blocking options
   confirmMessage.addEventListener('change', updateCheckboxState);
