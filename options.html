@@ -1,13 +1,20 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Sites - Website Blocker</title>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Website Blocker Options</title>
   <style>
-    body { font-family: Arial, sans-serif; }
-    ul { list-style-type: none; padding: 0; }
-    li { margin-bottom: 10px; display: flex; align-items: center; }
-    button { margin-left: 10px; }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+    .tab { overflow: hidden; border: 1px solid #ccc; background-color: #f1f1f1; }
+    .tab button { background-color: inherit; float: left; border: none; outline: none; cursor: pointer; padding: 14px 16px; transition: 0.3s; }
+    .tab button:hover { background-color: #ddd; }
+    .tab button.active { background-color: #ccc; }
+    .tabcontent { display: none; padding: 6px 12px; border: 1px solid #ccc; border-top: none; }
+    #blockedSitesList { list-style-type: none; padding: 0; }
+    #blockedSitesList li, #Blocking div { margin-bottom: 10px; }
+    .input-container { margin-top: 20px; display: flex; align-items: center; }
+    #blockedSitesList button { margin-left: 10px; }
     .disabled { text-decoration: line-through; }
     input[type="checkbox"] { margin-right: 10px; }
     select { margin-left: 10px; }
@@ -16,16 +23,45 @@
     .drag-handle { cursor: move; margin-right: 10px; }
     .edit-input { margin-right: 10px; }
     .star { margin-right: 10px; font-size: 125%; }
+    .indented { margin-left: 20px; }
   </style>
 </head>
 <body>
-  <h1>Blocked Sites</h1>
-  <div class="input-container">
-    <input type="text" id="addUrlInput" placeholder="Enter URL or Keyword">
-    <button id="addUrlButton">Add</button>
-    <button id="openHelp">Help</button>
+  <h1>Website Blocker Options</h1>
+
+  <div class="tab">
+    <button id="sitesTab" class="tablinks active" data-tab="Sites">Sites</button>
+    <button id="blockingTab" class="tablinks" data-tab="Blocking">Blocking</button>
+    <button id="pocketTab" class="tablinks" data-tab="Pocket">Pocket</button>
+    <button id="helpTab" class="tablinks" data-tab="Help">Help</button>
   </div>
-  <ul id="blockedSitesList"></ul>
+
+  <div id="Sites" class="tabcontent" style="display: block;">
+    <h2>Blocked Sites</h2>
+    <div class="input-container">
+      <input type="text" id="addUrlInput" placeholder="Enter URL or keyword">
+      <button id="addUrlButton">Add</button>
+    </div>
+    <ul id="blockedSitesList"></ul>
+  </div>
+
+  <div id="Blocking" class="tabcontent">
+    <h2>Blocking Options</h2>
+    <div>
+      <input type="checkbox" id="enableConfirmMessage">
+      <label for="enableConfirmMessage">Enable Confirm Message</label>
+    </div>
+    <div class="indented">
+      <input type="checkbox" id="enableReasonInput">
+      <label for="enableReasonInput">Enable Reason Input</label>
+    </div>
+  </div>
+
+  <div id="Pocket" class="tabcontent">
+    <h2>Pocket</h2>
+    <p>Coming Soon</p>
+  </div>
+
   <script src="options.js"></script>
 </body>
 </html>

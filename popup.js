@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
   const toggleBlockerButton = document.getElementById('toggleBlocker');
-  const openSitesButton = document.getElementById('openSites');
   const openOptionsButton = document.getElementById('openOptions');
   const openHelpButton = document.getElementById('openHelp');
   const blockStatusHeading = document.getElementById('blockStatus');
@@ -28,10 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   openOptionsButton.addEventListener('click', () => {
-    window.open('blocking.html', '_blank');
-  });
-
-  openSitesButton.addEventListener('click', () => {
     chrome.runtime.openOptionsPage();
   });
 

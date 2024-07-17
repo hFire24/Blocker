@@ -1,13 +1,38 @@
 document.addEventListener('DOMContentLoaded', () => {
+  //Tabs
+  const sitesTab = document.getElementById('sitesTab');
+  const blockingTab = document.getElementById('blockingTab');
+  const pocketTab = document.getElementById('pocketTab');
+  const helpTab = document.getElementById('helpTab');
+
+  function openTab(tabName) {
+    const tabcontent = document.getElementsByClassName("tabcontent");
+    for (let i = 0; i < tabcontent.length; i++) {
+      tabcontent[i].style.display = "none";
+    }
+    const tablinks = document.getElementsByClassName("tablinks");
+    for (let i = 0; i < tablinks.length; i++) {
+      tablinks[i].classList.remove("active");
+    }
+    document.getElementById(tabName).style.display = "block";
+    document.querySelector(`[data-tab="${tabName}"]`).classList.add("active");
+  }
+
+  sitesTab.addEventListener('click', () => openTab('Sites'));
+  blockingTab.addEventListener('click', () => openTab('Blocking'));
+  pocketTab.addEventListener('click', () => openTab('Pocket'));
+  helpTab.addEventListener('click', () => window.open('help.html'));
+
   const blockedList = document.getElementById('blockedSitesList');
   const addUrlInput = document.getElementById('addUrlInput');
   const addUrlButton = document.getElementById('addUrlButton');
-  const openHelpButton = document.getElementById('openHelp');
+  const confirmMessage = document.getElementById('enableConfirmMessage');
+  const reasonInput = document.getElementById('enableReasonInput');
 
   let draggedItem = null;
 
   // Load blocked items from storage
-  chrome.storage.sync.get(['blocked', 'enabled', 'favorites'], (data) => {
+  chrome.storage.sync.get(['blocked', 'enabled', 'favorites', 'enableConfirmMessage', 'enableReasonInput'], (data) => {
     const blocked = data.blocked || [];
     const enabled = data.enabled || [];
     const favorites = data.favorites || [];
@@ -15,7 +40,32 @@ document.addEventListener('DOMContentLoaded', () => {
     blocked.forEach(item => {
       addItemToList(item, enabled.includes(item), favorites.includes(item));
     });
+
+    // Set blocking options
+    confirmMessage.checked = data.enableConfirmMessage !== undefined ? data.enableConfirmMessage : true;
+    reasonInput.checked = data.enableReasonInput !== undefined ? data.enableReasonInput : true;
+    updateCheckboxState();
   });
+
+  // Event listeners for blocking options
+  confirmMessage.addEventListener('change', updateCheckboxState);
+  reasonInput.addEventListener('change', saveOptions);
+
+  function updateCheckboxState() {
+    if (!confirmMessage.checked) {
+      reasonInput.checked = false;
+      reasonInput.disabled = true;
+    } else {
+      reasonInput.disabled = false;
+    }
+    saveOptions();
+  }
+
+  function saveOptions() {
+    const enableConfirmMessage = confirmMessage.checked;
+    const enableReasonInput = reasonInput.checked;
+    chrome.storage.sync.set({ enableConfirmMessage, enableReasonInput });
+  }
 
   addUrlButton.addEventListener('click', () => {
     const url = addUrlInput.value.trim().toLowerCase();
@@ -23,10 +73,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (url) {
       addBlockedPattern(url, type);
     }
-  });
-
-  openHelpButton.addEventListener('click', () => {
-    window.open('help.html', '_blank');
   });
 
   function validateRegex(pattern) {
