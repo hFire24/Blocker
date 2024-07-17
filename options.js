@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Tabs
   const sitesTab = document.getElementById('sitesTab');
   const blockingTab = document.getElementById('blockingTab');
+  const analyticsTab = document.getElementById('analyticsTab');
   const pocketTab = document.getElementById('pocketTab');
   const helpTab = document.getElementById('helpTab');
 
@@ -20,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   sitesTab.addEventListener('click', () => openTab('Sites'));
   blockingTab.addEventListener('click', () => openTab('Blocking'));
+  analyticsTab.addEventListener('click', () => openTab('Analytics'));
   pocketTab.addEventListener('click', () => openTab('Pocket'));
   helpTab.addEventListener('click', () => window.open('help.html'));
 
@@ -32,10 +34,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let draggedItem = null;
 
   // Load blocked items from storage
-  chrome.storage.sync.get(['blocked', 'enabled', 'favorites', 'enableConfirmMessage', 'enableReasonInput'], (data) => {
+  chrome.storage.sync.get(['blocked', 'enabled', 'favorites', 'enableConfirmMessage', 'enableReasonInput', 'blockedCounts'], (data) => {
     const blocked = data.blocked || [];
     const enabled = data.enabled || [];
     const favorites = data.favorites || [];
+    const blockedCounts = data.blockedCounts || {};
 
     blocked.forEach(item => {
       addItemToList(item, enabled.includes(item), favorites.includes(item));
@@ -45,6 +48,29 @@ document.addEventListener('DOMContentLoaded', () => {
     confirmMessage.checked = data.enableConfirmMessage !== undefined ? data.enableConfirmMessage : true;
     reasonInput.checked = data.enableReasonInput !== undefined ? data.enableReasonInput : true;
     updateCheckboxState();
+
+    // Set table
+    const tableBody = document.getElementById('analyticsTableBody');
+    tableBody.innerHTML = '';
+
+    Object.keys(blockedCounts).forEach(date => {
+      const countsForDate = blockedCounts[date];
+      Object.keys(countsForDate).forEach(pattern => {
+        const row = document.createElement('tr');
+        const patternCell = document.createElement('td');
+        const dateCell = document.createElement('td');
+        const countCell = document.createElement('td');
+
+        patternCell.textContent = getDisplayText(pattern);
+        dateCell.textContent = date;
+        countCell.textContent = countsForDate[pattern];
+
+        row.appendChild(patternCell);
+        row.appendChild(dateCell);
+        row.appendChild(countCell);
+        tableBody.appendChild(row);
+      });
+    });
   });
 
   // Listen for changes in chrome.storage and update the blocked list in real time
@@ -350,14 +376,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function deleteItem(pattern, listItem) {
-    chrome.storage.sync.get(['blocked', 'enabled', 'favorites'], (data) => {
-      const blocked = data.blocked.filter(item => item !== pattern);
-      const enabled = data.enabled.filter(item => item !== pattern);
-      const favorites = data.favorites.filter(item => item !== pattern)
-      chrome.storage.sync.set({ blocked, enabled, favorites }, () => {
-        listItem.remove();
+    if(confirm("Are you sure you want to delete this item?")) {
+      chrome.storage.sync.get(['blocked', 'enabled', 'favorites'], (data) => {
+        const blocked = data.blocked.filter(item => item !== pattern);
+        const enabled = data.enabled.filter(item => item !== pattern);
+        const favorites = data.favorites.filter(item => item !== pattern)
+        chrome.storage.sync.set({ blocked, enabled, favorites }, () => {
+          listItem.remove();
+        });
       });
-    });
+    }
   }
 
   function handleDragStart(e) {

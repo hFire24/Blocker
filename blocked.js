@@ -3,7 +3,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const url = message.url;
     const today = new Date().toISOString().split('T')[0];
 
-    // Retrieve the count from storage
     chrome.storage.sync.get(['blockedCounts'], (data) => {
       const blockedCounts = data.blockedCounts || {};
       const countsForToday = blockedCounts[today] || {};
@@ -19,10 +18,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       sessionStorage.setItem('lastBlockedUrl', url);
       sessionStorage.setItem('blockCount', JSON.stringify({ [matchingKey]: count }));
-
-      // Debugging
-      console.log('Blocked URL set:', url);
-      console.log('Block count set:', { [matchingKey]: count });
     });
   }
 });
@@ -49,7 +44,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   let enableReasonInput = true;
   let enableTimeInput = false;
 
-  // Load options
   chrome.storage.sync.get(['enableConfirmMessage', 'enableReasonInput', 'enableTimeInput'], (data) => {
     enableConfirmMessage = (data.enableConfirmMessage !== undefined) ? data.enableConfirmMessage : true;
     enableReasonInput = (data.enableReasonInput !== undefined) ? data.enableReasonInput : true;
@@ -59,8 +53,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   try {
     const blockCountJSON = await waitForStorage('blockCount');
-    console.log('Block count retrieved:', blockCountJSON); // Debugging
-
     if (blockCountJSON) {
       const blockCount = JSON.parse(blockCountJSON);
       const blockCountMessage = document.getElementById('blockCountMessage');
@@ -88,7 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       displayText = displayText.replace("[^&]*)", '');
     }
     return displayText;
-  }  
+  }
 
   function updateUnblockButtonText() {
     const unblockEmoji = document.getElementById("unblockEmoji");
@@ -120,7 +112,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         let toUnblock = [];
 
-        // Check blocked list for regex matches
         blocked.forEach(blockedItem => {
           try {
             const regex = new RegExp(blockedItem);
@@ -132,7 +123,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           }
         });
 
-        // Remove from the enabled list
         let newEnabled = enabled.filter(enabledItem => !toUnblock.includes(enabledItem));
 
         chrome.storage.sync.set({ enabled: newEnabled }, () => {

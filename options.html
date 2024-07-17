@@ -24,6 +24,9 @@
     .edit-input { margin-right: 10px; }
     .star { margin-right: 10px; font-size: 125%; }
     .indented { margin-left: 20px; }
+    table { border-collapse: collapse; }
+    th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background-color: #f2f2f2; }
   </style>
 </head>
 <body>
@@ -32,6 +35,7 @@
   <div class="tab">
     <button id="sitesTab" class="tablinks active" data-tab="Sites">Sites</button>
     <button id="blockingTab" class="tablinks" data-tab="Blocking">Blocking</button>
+    <button id="analyticsTab" class="tablinks" data-tab="Analytics">Analytics</button>
     <button id="pocketTab" class="tablinks" data-tab="Pocket">Pocket</button>
     <button id="helpTab" class="tablinks" data-tab="Help">Help</button>
   </div>
@@ -55,6 +59,22 @@
       <input type="checkbox" id="enableReasonInput">
       <label for="enableReasonInput">Enable Reason Input</label>
     </div>
+  </div>
+
+  <div id="Analytics" class="tabcontent">
+    <h2>Blocker Analytics</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Date</th>
+          <th>Count</th>
+        </tr>
+      </thead>
+      <tbody id="analyticsTableBody">
+        <!-- Analytics data will be inserted here -->
+      </tbody>
+    </table>
   </div>
 
   <div id="Pocket" class="tabcontent">

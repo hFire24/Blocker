@@ -47,6 +47,17 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         chrome.storage.sync.get(['blockedCounts'], (data) => {
           const today = new Date().toISOString().split('T')[0];
           let blockedCounts = data.blockedCounts || {};
+
+          // Remove entries older than 30 days
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          const cutoffDate = thirtyDaysAgo.toISOString().split('T')[0];
+
+          blockedCounts = Object.fromEntries(
+            Object.entries(blockedCounts).filter(([date]) => date >= cutoffDate)
+          );
+
+          // Add new block count
           if (!blockedCounts[today]) {
             blockedCounts[today] = {};
           }
