@@ -80,13 +80,14 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'scheduleReblock') {
-    console.log("Schedule Reblock Called");
-    const { url, duration } = message;
-    scheduleReblock(url, duration);
+    const { url, duration, itemsToReblock } = message;
+    scheduleReblock(url, duration, itemsToReblock);
+    sendResponse(); // Immediately send response
+    return true;  // Indicates we will send a response asynchronously
   }
 });
 
-function scheduleReblock(url, duration) {
+function scheduleReblock(url, duration, itemsToReblock) {
   setTimeout(() => {
     chrome.storage.sync.get(['blocked', 'enabled'], (data) => {
       const currentBlocked = data.blocked || [];
@@ -103,9 +104,11 @@ function scheduleReblock(url, duration) {
       });
 
       if (stillBlocked) {
-        // Re-block the URL if it is still in the blocked list
-        const updatedEnabled = currentEnabled.filter(item => item !== url);
-        chrome.storage.sync.set({ enabled: updatedEnabled });
+        // Add the temporarily unblocked items back to the enabled array
+        const updatedEnabled = [...currentEnabled, ...itemsToReblock];
+        chrome.storage.sync.set({ enabled: updatedEnabled }, () => {
+          console.log(`Reblocked items: ${itemsToReblock.join(', ')}`);
+        });
       }
     });
   }, duration * 60 * 1000); // convert minutes to milliseconds
