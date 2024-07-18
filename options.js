@@ -66,30 +66,44 @@ document.addEventListener('DOMContentLoaded', () => {
   chrome.storage.local.get(['blockedCounts'], (data) => {
     const blockedCounts = data.blockedCounts || {};
 
+    // Convert the blockedCounts object to an array for sorting
+    const blockedCountsArray = [];
+    Object.keys(blockedCounts).forEach(date => {
+      const countsForDate = blockedCounts[date];
+      Object.keys(countsForDate).forEach(pattern => {
+        blockedCountsArray.push({
+          date: date,
+          pattern: pattern,
+          count: countsForDate[pattern]
+        });
+      });
+    });
+
+    // Sort the array by date in descending order and then by count in descending order
+    blockedCountsArray.sort((a, b) => {
+      const dateComparison = new Date(b.date) - new Date(a.date);
+      if (dateComparison !== 0) return dateComparison;
+      return b.count - a.count;
+    });
+
     // Set table
     const tableBody = document.getElementById('analyticsTableBody');
     tableBody.innerHTML = '';
 
-    // Get dates and sort them in descending order
-    const sortedDates = Object.keys(blockedCounts).sort((a, b) => new Date(b) - new Date(a));
+    blockedCountsArray.forEach(entry => {
+      const row = document.createElement('tr');
+      const patternCell = document.createElement('td');
+      const dateCell = document.createElement('td');
+      const countCell = document.createElement('td');
 
-    sortedDates.forEach(date => {
-      const countsForDate = blockedCounts[date];
-      Object.keys(countsForDate).forEach(pattern => {
-        const row = document.createElement('tr');
-        const patternCell = document.createElement('td');
-        const dateCell = document.createElement('td');
-        const countCell = document.createElement('td');
+      patternCell.textContent = getDisplayText(entry.pattern);
+      dateCell.textContent = entry.date;
+      countCell.textContent = entry.count;
 
-        patternCell.textContent = getDisplayText(pattern);
-        dateCell.textContent = date;
-        countCell.textContent = countsForDate[pattern];
-
-        row.appendChild(patternCell);
-        row.appendChild(dateCell);
-        row.appendChild(countCell);
-        tableBody.appendChild(row);
-      });
+      row.appendChild(patternCell);
+      row.appendChild(dateCell);
+      row.appendChild(countCell);
+      tableBody.appendChild(row);
     });
   });
 
