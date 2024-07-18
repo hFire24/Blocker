@@ -70,7 +70,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const tableBody = document.getElementById('analyticsTableBody');
     tableBody.innerHTML = '';
 
-    Object.keys(blockedCounts).forEach(date => {
+    // Get dates and sort them in descending order
+    const sortedDates = Object.keys(blockedCounts).sort((a, b) => new Date(b) - new Date(a));
+
+    sortedDates.forEach(date => {
       const countsForDate = blockedCounts[date];
       Object.keys(countsForDate).forEach(pattern => {
         const row = document.createElement('tr');
@@ -343,6 +346,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function editItem(oldPattern, listItem, itemText) {
     const displayText = getDisplayText(oldPattern);
+    const blockedList = document.getElementById('blockedSitesList');
+    const listItems = blockedList.querySelectorAll('li');
+
+    if(blockedList.querySelectorAll('button.save').length === 0) {
+      listItems.forEach(li => {
+        li.setAttribute('draggable', 'false');
+      });
+    }
     const type = oldPattern.includes('^https?://') ? '🌐' : '🔍';
     
     // Create edit input
@@ -354,6 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Create save button
     const saveButton = document.createElement('button');
     saveButton.textContent = 'Save';
+    saveButton.className = 'save';
     saveButton.addEventListener('click', () => {
       const newDisplayText = editInput.value.trim();
       if (isPatternTooBroad(newDisplayText)) {
@@ -386,6 +398,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function revertToDisplayMode() {
       listItem.replaceChild(itemText, editInput);
+      const blockedList = document.getElementById('blockedSitesList');
+      const listItems = blockedList.querySelectorAll('li');
+      
+      if(blockedList.querySelectorAll('button.save').length <= 1) {
+        listItems.forEach(li => {
+          li.setAttribute('draggable', 'true');
+        });
+      }
+      
       const editButton = document.createElement('button');
       editButton.textContent = 'Edit';
       editButton.addEventListener('click', () => {
