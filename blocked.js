@@ -96,8 +96,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function updateUnblockButtonText() {
     const unblockEmoji = document.getElementById("unblockEmoji");
+    const unblockText = document.getElementById("unblockText");
     if (enableReasonInput) {
       unblockEmoji.innerText = "📝";
+      unblockText.innerText = "Give a Reason";
     } else if (enableConfirmMessage) {
       unblockEmoji.innerText = "❓";
     } else if (enableTimeInput) {
