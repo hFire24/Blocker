@@ -120,8 +120,6 @@ document.addEventListener('DOMContentLoaded', () => {
   ubDuration.addEventListener('change', saveOptions);
 
   function toggleTempUnblocking() {
-    tempUbOptions.disabled = !tempUnblocking.checked ? true : false;
-    tempUbPopup.disabled = !tempUnblocking.checked ? true : false;
     if(!tempUnblocking.checked) {
       chrome.alarms.clearAll(() => {
         chrome.storage.sync.get(null, (items) => {
@@ -138,11 +136,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       });
     }
-    saveOptions();
+    updateCheckboxState();
   }
 
   function updateCheckboxState() {
     reasonInput.disabled = !confirmMessage.checked ? true : false;
+    tempUbOptions.disabled = !tempUnblocking.checked ? true : false;
+    tempUbPopup.disabled = !tempUnblocking.checked ? true : false;
     saveOptions();
   }
 
@@ -188,20 +188,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   function isPatternTooBroad(pattern) {
-    return pattern.length < 3 || pattern.includes('.*') || pattern.includes('.*?') || pattern.includes('.+');
+    return pattern.length < 4 || pattern.includes('.*') || pattern.includes('.*?') || pattern.includes('.+');
   }
   
   function addBlockedPattern(pattern, type) {
+    if (isPatternTooBroad(pattern)) {
+      alert("This pattern is too broad and may block unintended URLs. Please make it more specific.");
+      return;
+    }
     pattern = formatPattern(pattern, type);
 
     if (!validateRegex(pattern)) {
       alert("Invalid regular expression. Please try again.");
       return;
     }
-    /*if (isPatternTooBroad(pattern)) {
-      alert("This pattern is too broad and may block unintended URLs. Please make it more specific.");
-      return;
-    }*/
     // Add the pattern to the blocked list and the enabled list
     chrome.storage.sync.get(['blocked', 'enabled'], (data) => {
       const blocked = data.blocked || [];
@@ -211,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!enabled.includes(pattern)) {
           enabled.push(pattern);
         }
-        chrome.storage.sync.set({ blocked, enabled }, () => {
+        chrome.storage.sync.set({ blocked, enabled, [`blockedTimestamp_${getDisplayText(pattern)}`]: Date.now() }, () => {
           addItemToList(pattern, true);
         });
       }
@@ -308,11 +308,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function toggleItem(pattern, isEnabled, itemText) {
-    chrome.storage.sync.get('enabled', (data) => {
+    const displayPattern = getDisplayText(pattern);
+    chrome.storage.sync.get(['enabled', `blockedTimestamp_${displayPattern}`], (data) => {
       let enabled = data.enabled || [];
       if (isEnabled) {
         if (!enabled.includes(pattern)) {
           enabled.push(pattern);
+          if (!data[`blockedTimestamp_${displayPattern}`]) {
+            chrome.storage.sync.set({ [`blockedTimestamp_${displayPattern}`]: Date.now() });
+          }
         }
         itemText.classList.remove('disabled');
       } else {
@@ -321,7 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       chrome.storage.sync.set({ enabled }, () => {
         if (isEnabled) {
-          const alarmName = `reblock_${getDisplayText(pattern)}`;
+          const alarmName = `reblock_${displayPattern}`;
           deleteAlarm(alarmName);
         }
       });
@@ -352,11 +356,19 @@ document.addEventListener('DOMContentLoaded', () => {
     saveButton.textContent = 'Save';
     saveButton.addEventListener('click', () => {
       const newDisplayText = editInput.value.trim();
+      if (isPatternTooBroad(newDisplayText)) {
+        alert("This pattern is too broad and may block unintended URLs. Please make it more specific.");
+        revertToDisplayMode();
+        return;
+      }
       if (newDisplayText && newDisplayText !== displayText) {
-        const newPattern = newDisplayText.includes('.') ? 
-          formatPattern(newDisplayText, 'website') : 
-          formatPattern(newDisplayText, 'keyword');
-
+        const newPattern = newDisplayText.includes('.') ? formatPattern(newDisplayText, 'website') : formatPattern(newDisplayText, 'keyword');
+        
+        if (!validateRegex(newPattern)) {
+          alert("Invalid regular expression. Please try again.");
+          revertToDisplayMode();
+          return;
+        }
         updatePattern(oldPattern, newPattern, listItem, itemText);
       } else {
         // If no changes, revert back to display mode
@@ -410,10 +422,12 @@ document.addEventListener('DOMContentLoaded', () => {
         favorites[favoritesIndex] = newPattern;
       }
 
+      chrome.storage.sync.remove(`blockedTimestamp_${getDisplayText(oldPattern)}`);
+
       const alarmName = `reblock_${getDisplayText(oldPattern)}`;
       deleteAlarm(alarmName);
 
-      chrome.storage.sync.set({ blocked, enabled, favorites }, () => {
+      chrome.storage.sync.set({ blocked, enabled, favorites, [`blockedTimestamp_${getDisplayText(newPattern)}`]: Date.now() }, () => {
         const type = newPattern.includes('^https?://') ? '🌐' : '🔍';
         const displayText = getDisplayText(newPattern);
         itemText.textContent = `${type} ${displayText}`;
@@ -444,6 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const favorites = data.favorites.filter(item => item !== pattern);
         chrome.storage.sync.set({ blocked, enabled, favorites }, () => {
           listItem.remove();
+          chrome.storage.sync.remove(`blockedTimestamp_${getDisplayText(pattern)}`);
           const alarmName = `reblock_${getDisplayText(pattern)}`;
           deleteAlarm(alarmName);
         });

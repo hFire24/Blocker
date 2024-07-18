@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await new Promise((resolve) => chrome.storage.sync.set({ enabled: newEnabled }, resolve));
   
         // Schedule the reblock if necessary
-        if (!isNaN(duration) && duration > 0 && canTempUnblock) {
+        if (!isNaN(duration) && duration > 0 && duration <= 1440 && canTempUnblock) {
           chrome.runtime.sendMessage({ 
             action: 'scheduleReblock', 
             url: lastBlockedUrl, 
@@ -192,11 +192,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       let confirmText = "Are you sure you want to unblock this site";
       confirmText += reason === "" ? "?" : ` for the following reason: "${reason}"?`;
-      document.getElementById('confirmText').textContent = confirmText;
+  
+      // Calculate the blocking duration
+      const lastBlockedUrl = sessionStorage.getItem('lastBlockedUrl');
+      if (lastBlockedUrl) {
+        const data = await new Promise((resolve) => chrome.storage.sync.get(null, resolve));
+        const enabled = data.enabled || [];
+        const matchedPattern = enabled.find(pattern => new RegExp(pattern).test(lastBlockedUrl));
+        if (matchedPattern) {
+          const timestamp = data[`blockedTimestamp_${getDisplayText(matchedPattern)}`];
+          const duration = timestamp ? getBlockingDuration(timestamp) : "a while";
+          confirmText += `<br>You have been blocking it for ${duration}.`;
+        }
+      }
+      
+      document.getElementById('confirmText').innerHTML = confirmText;
       document.querySelector('.confirm-message').style.display = 'block';
       document.querySelector('.reason-input').style.display = 'none';
     }
   }
+  
+  // Function to calculate blocking duration
+  function getBlockingDuration(startTime) {
+    const now = Date.now();
+    const durationMs = now - startTime;
+    
+    const minute = 60 * 1000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+    if (durationMs < minute) {
+      return 'less than a minute';
+    } else if (durationMs < hour) {
+      const minutes = Math.floor(durationMs / minute);
+      return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+    } else if (durationMs < day) {
+      const hours = Math.floor(durationMs / hour);
+      const minutes = Math.floor((durationMs % hour) / minute);
+      return `${hours} hour${hours !== 1 ? 's' : ''} and ${minutes} minute${minutes !== 1 ? 's' : ''}`;
+    } else if (durationMs < 30 * day) {
+      const days = Math.floor(durationMs / day);
+      const hours = Math.floor((durationMs % day) / hour);
+      return `${days} day${days !== 1 ? 's' : ''} and ${hours} hour${hours !== 1 ? 's' : ''}`;
+    } else {
+      return 'a while';
+    }
+  }
+  
 
   async function submitReason(reason) {
     reason = reason || document.getElementById('reason').value.trim();
@@ -216,15 +257,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function handleUnblockTime() {
     const durationSelect = document.getElementById('unblockDuration');
     const customDurationInput = document.getElementById('customDuration');
+    const customDurationHrsInput = document.getElementById('customDurationHrs');
     let duration = durationSelect.value;
 
     if (duration === 'custom') {
       duration = customDurationInput.value;
+    } else if (duration === 'hours') {
+      duration = parseInt(customDurationHrsInput.value) * 60 + parseInt(customDurationInput.value);
     }
 
     if(duration === 'forever') {
       await unblockSite(0, false);
-    } else if (!isNaN(duration) && duration > 0) {
+    } else if (!isNaN(duration) && duration > 0 && duration <= 1440) {
       await unblockSite(parseInt(duration, 10), true);
     } else {
       alert('Please enter a valid duration.');
@@ -266,10 +310,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('cancelUnblockButton').addEventListener('click', closeTab);
   document.getElementById('unblockDuration').addEventListener('change', (event) => {
     const customDurationInput = document.getElementById('customDuration');
+    const customDurationHrsInput = document.getElementById('customDurationHrs');
+    const colon = document.getElementById('customDurationColon');
     if (event.target.value === 'custom') {
       customDurationInput.style.display = 'inline';
+      customDurationHrsInput.style.display = 'none';
+      colon.style.display = 'none';
+      customDurationInput.min = '1';
+      customDurationInput.max = '1440';
+      customDurationInput.value = parseInt(customDurationHrsInput.value) * 60 + parseInt(customDurationInput.value);
+    } else if (event.target.value === 'hours') {
+      customDurationInput.style.display = 'inline';
+      customDurationHrsInput.style.display = 'inline';
+      colon.style.display = 'inline';
+      if(Math.floor(customDurationInput.value / 60) !== parseInt(customDurationHrsInput.value))
+        customDurationHrsInput.value = Math.floor(customDurationInput.value / 60)
+      customDurationInput.value = customDurationInput.value % 60;
+      customDurationInput.min = '0';
+      customDurationInput.max = '59';
     } else {
       customDurationInput.style.display = 'none';
+      customDurationHrsInput.style.display = 'none';
+      colon.style.display = 'none';
     }
   });
   document.getElementById('unblockTimeButton').addEventListener('click', async () => {

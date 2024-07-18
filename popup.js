@@ -106,11 +106,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function toggleBlockedItem(pattern, isEnabled, itemText) {
-    chrome.storage.sync.get('enabled', (data) => {
+    const displayPattern = getDisplayText(pattern);
+    chrome.storage.sync.get(['enabled', `blockedTimestamp_${displayPattern}`], (data) => {
       let enabled = data.enabled || [];
       if (isEnabled) {
         if (!enabled.includes(pattern)) {
           enabled.push(pattern);
+          if (!data[`blockedTimestamp_${displayPattern}`]) {
+            chrome.storage.sync.set({ [`blockedTimestamp_${displayPattern}`]: Date.now() });
+          }
         }
         itemText.classList.remove('disabled');
       } else {
@@ -119,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       chrome.storage.sync.set({ enabled }, () => {
         if (isEnabled) {
-          const alarmName = `reblock_${getDisplayText(pattern)}`;
+          const alarmName = `reblock_${displayPattern}`;
           chrome.alarms.clear(alarmName, (wasCleared) => {
             if (wasCleared) {
               console.log(`Cleared ${alarmName}`);

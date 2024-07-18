@@ -73,6 +73,22 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
             });
           });
         });
+      } else if (isBlocked && !isEnabled) {
+        console.log("Blocked and disabled");
+        // Delete the blockedTimestamp item
+        const matchingBlockedItem = blocked.find(blockedItem => {
+          try {
+            const regex = new RegExp(blockedItem);
+            return regex.test(fullUrl);
+          } catch (e) {
+            console.error('Invalid regex pattern:', blockedItem);
+            return false;
+          }
+        });
+
+        if (matchingBlockedItem) {
+          chrome.storage.sync.remove(`blockedTimestamp_${getDisplayText(matchingBlockedItem)}`);
+        }
       }
     });
   }
@@ -136,7 +152,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
           if (stillBlocked) {
             // Add the temporarily unblocked item back to the enabled array
             const updatedEnabled = [...currentEnabled, item];
-            chrome.storage.sync.set({ enabled: updatedEnabled }, () => {
+            chrome.storage.sync.set({ enabled: updatedEnabled, [`blockedTimestamp_${getDisplayText(item)}`]: Date.now() }, () => {
               console.log(`Reblocked item: ${item}`);
             });
           }

@@ -119,14 +119,18 @@
       <select id="unblockDuration">
         <option value="1">1 minute</option>
         <option value="5">5 minutes</option>
+        <option value="10">10 minutes</option>
         <option value="15">15 minutes</option>
         <option value="30">30 minutes</option>
         <option value="60">1 hour</option>
         <option value="1440">1 day</option>
         <option value="forever">Forever</option>
         <option value="custom" selected>Custom (minutes)</option>
+        <option value="hours">Custom (hours)</option>
       </select>
-      <input type="number" id="customDuration" placeholder="Enter minutes" min="1" max="1440" style="display:inline;">
+      <input type="number" id="customDurationHrs" min="0" max="23" value="0" style="display:none;">
+      <span id="customDurationColon" style="display:none">:</span>
+      <input type="number" id="customDuration" min="1" max="1440" style="display:inline;">
       <button id="unblockTimeButton" class="unblock-time-button">Unblock and Continue</button>
     </div>
   </div>
