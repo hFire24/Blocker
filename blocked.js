@@ -3,7 +3,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const url = message.url;
     const today = getLocalDate();
 
-    chrome.storage.local.get(['blockedCounts'], (data) => {
+    chrome.storage.local.get(['blockedCounts'], async (data) => {
       const blockedCounts = data.blockedCounts || {};
       const countsForToday = blockedCounts[today] || {};
       const matchingKey = Object.keys(countsForToday).find(k => {
@@ -16,8 +16,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }) || url;
       const count = countsForToday[matchingKey] || 0;
 
-      sessionStorage.setItem('lastBlockedUrl', url);
-      sessionStorage.setItem('blockCount', JSON.stringify({ [matchingKey]: count }));
+      try {
+        await setChromeStorage({ lastBlockedUrl: url });
+        await setChromeStorage({ blockCount: { [matchingKey]: count } });
+      } catch (error) {
+        console.error('Error setting storage:', error);
+      }
     });
   }
 });
@@ -30,20 +34,15 @@ function getLocalDate() {
   return `${year}-${month}-${day}`;
 }
 
-function waitForStorage(key, timeout = 1000) {
+function setChromeStorage(data) {
   return new Promise((resolve, reject) => {
-    const startTime = Date.now();
-    const checkStorage = () => {
-      const value = sessionStorage.getItem(key);
-      if (value !== null) {
-        resolve(value);
-      } else if (Date.now() - startTime > timeout) {
-        reject(new Error('Storage retrieval timed out.'));
+    chrome.storage.sync.set(data, () => {
+      if (chrome.runtime.lastError) {
+        reject(chrome.runtime.lastError);
       } else {
-        setTimeout(checkStorage, 50);
+        resolve();
       }
-    };
-    checkStorage();
+    });
   });
 }
 
@@ -63,23 +62,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateUnblockButtonText();
   });
 
-  try {
-    const blockCountJSON = await waitForStorage('blockCount');
-    if (blockCountJSON) {
-      const blockCount = JSON.parse(blockCountJSON);
+  // Wait until storage is set before getting the data
+  setTimeout(() => {
+    chrome.storage.sync.get(['blockCount'], (data) => {
+      const blockCount = data.blockCount;
       const blockCountMessage = document.getElementById('blockCountMessage');
       blockCountMessage.innerHTML = '';
-      for (const [pattern, count] of Object.entries(blockCount)) {
-        const p = document.createElement('p');
-        const displayText = getDisplayText(pattern);
-        const times = (count === 1) ? 'time' : 'times';
-        p.textContent = `Website Blocker has blocked ${displayText} ${count} ${times} today.`;
-        blockCountMessage.appendChild(p);
+      if (blockCount) {
+        for (const [pattern, count] of Object.entries(blockCount)) {
+          const p = document.createElement('p');
+          const displayText = getDisplayText(pattern);
+          const times = (count === 1) ? 'time' : 'times';
+          p.textContent = `Website Blocker has blocked ${displayText} ${count} ${times} today.`;
+          blockCountMessage.appendChild(p);
+        }
       }
-    }
-  } catch (error) {
-    console.error('Error retrieving block count:', error);
-  }
+    });
+  }, 100); // Adjust timeout as needed to ensure storage set operations are complete
 
   function getDisplayText(pattern) {
     let displayText = pattern;
@@ -116,62 +115,61 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function closeTab() {
-    sessionStorage.removeItem('lastBlockedUrl');
+    chrome.storage.sync.remove('lastBlockedUrl');
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       chrome.tabs.remove(tabs[0].id);
     });
-  }
+  }  
 
   async function unblockSite(duration, canTempUnblock) {
-    const lastBlockedUrl = sessionStorage.getItem('lastBlockedUrl');
+    chrome.storage.sync.get('lastBlockedUrl', (data) => {
+      const lastBlockedUrl = data.lastBlockedUrl;
   
-    if (lastBlockedUrl) {
-      try {
-        const data = await new Promise((resolve) => chrome.storage.sync.get(['blocked', 'enabled'], resolve));
-        const blocked = data.blocked || [];
-        const enabled = data.enabled || [];
+      if (lastBlockedUrl) {
+        chrome.storage.sync.get(['blocked', 'enabled'], async (data) => {
+          const blocked = data.blocked || [];
+          const enabled = data.enabled || [];
   
-        let toUnblock = [];
+          let toUnblock = [];
   
-        blocked.forEach(blockedItem => {
-          try {
-            const regex = new RegExp(blockedItem);
-            if (regex.test(lastBlockedUrl) && enabled.includes(blockedItem)) {
-              toUnblock.push(blockedItem);
+          blocked.forEach(blockedItem => {
+            try {
+              const regex = new RegExp(blockedItem);
+              if (regex.test(lastBlockedUrl) && enabled.includes(blockedItem)) {
+                toUnblock.push(blockedItem);
+              }
+            } catch (e) {
+              console.error('Invalid regex pattern:', blockedItem);
             }
-          } catch (e) {
-            console.error('Invalid regex pattern:', blockedItem);
-          }
-        });
-  
-        // Remove the items to unblock from the enabled array
-        let newEnabled = enabled.filter(enabledItem => !toUnblock.includes(enabledItem));
-  
-        // Immediately unblock by updating the enabled list
-        await new Promise((resolve) => chrome.storage.sync.set({ enabled: newEnabled }, resolve));
-  
-        // Schedule the reblock if necessary
-        if (!isNaN(duration) && duration > 0 && duration <= 1440 && canTempUnblock) {
-          chrome.runtime.sendMessage({ 
-            action: 'scheduleReblock', 
-            url: lastBlockedUrl, 
-            duration: duration,
-            itemsToReblock: toUnblock
           });
-        }
   
-        // Immediately navigate to the unblocked URL
-        chrome.tabs.update({ url: lastBlockedUrl }, () => {
-          sessionStorage.removeItem('lastBlockedUrl');
+          // Remove the items to unblock from the enabled array
+          let newEnabled = enabled.filter(enabledItem => !toUnblock.includes(enabledItem));
+  
+          // Immediately unblock by updating the enabled list
+          await new Promise((resolve) => chrome.storage.sync.set({ enabled: newEnabled }, resolve));
+  
+          // Schedule the reblock if necessary
+          if (!isNaN(duration) && duration > 0 && duration <= 1440 && canTempUnblock) {
+            chrome.runtime.sendMessage({
+              action: 'scheduleReblock',
+              url: lastBlockedUrl,
+              duration: duration,
+              itemsToReblock: toUnblock
+            });
+          }
+  
+          // Immediately navigate to the unblocked URL
+          chrome.tabs.update({ url: lastBlockedUrl }, () => {
+            chrome.storage.sync.remove('lastBlockedUrl');
+          });
+  
         });
-  
-      } catch (error) {
-        console.error('Error in unblockSite:', error);
+      } else {
+        closeTab();
       }
-    } else {
-      closeTab();
-    }
-  }
+    });
+  }  
 
   async function showReasonInput() {
     if (!enableReasonInput && !enableConfirmMessage && !enableTimeInput) {
@@ -194,19 +192,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       confirmText += reason === "" ? "?" : ` for the following reason: "${reason}"?`;
   
       // Calculate the blocking duration
-      const lastBlockedUrl = sessionStorage.getItem('lastBlockedUrl');
-      if (lastBlockedUrl) {
-        const data = await new Promise((resolve) => chrome.storage.sync.get(null, resolve));
-        const enabled = data.enabled || [];
-        const matchedPattern = enabled.find(pattern => new RegExp(pattern).test(lastBlockedUrl));
-        if (matchedPattern) {
-          const timestamp = data[`blockedTimestamp_${getDisplayText(matchedPattern)}`];
-          const duration = timestamp ? getBlockingDuration(timestamp) : "a while";
-          let durationText = `You have been blocking it for ${duration}.`;
-          document.getElementById('durationText').innerText = durationText;
+      chrome.storage.sync.get('lastBlockedUrl', (data) => {
+        const lastBlockedUrl = data.lastBlockedUrl;
+        if (lastBlockedUrl) {
+          chrome.storage.sync.get(null, (data) => {
+            const enabled = data.enabled || [];
+            const matchedPattern = enabled.find(pattern => new RegExp(pattern).test(lastBlockedUrl));
+            if (matchedPattern) {
+              const timestamp = data[`blockedTimestamp_${getDisplayText(matchedPattern)}`];
+              const duration = timestamp ? getBlockingDuration(timestamp) : "a while";
+              let durationText = `You have been blocking it for ${duration}.`;
+              document.getElementById('durationText').innerText = durationText;
+            }
+          });
         }
-      }
-      
+      });
+  
       document.getElementById('confirmText').innerText = confirmText;
       document.querySelector('.confirm-message').style.display = 'block';
       document.querySelector('.reason-input').style.display = 'none';
