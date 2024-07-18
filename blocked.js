@@ -202,11 +202,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (matchedPattern) {
           const timestamp = data[`blockedTimestamp_${getDisplayText(matchedPattern)}`];
           const duration = timestamp ? getBlockingDuration(timestamp) : "a while";
-          confirmText += `<br>You have been blocking it for ${duration}.`;
+          let durationText = `You have been blocking it for ${duration}.`;
+          document.getElementById('durationText').innerText = durationText;
         }
       }
       
-      document.getElementById('confirmText').innerHTML = confirmText;
+      document.getElementById('confirmText').innerText = confirmText;
       document.querySelector('.confirm-message').style.display = 'block';
       document.querySelector('.reason-input').style.display = 'none';
     }
