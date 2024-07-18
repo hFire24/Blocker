@@ -135,7 +135,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           blocked.forEach(blockedItem => {
             try {
               const regex = new RegExp(blockedItem);
-              if (regex.test(lastBlockedUrl) && enabled.includes(blockedItem)) {
+              if (regex.test(lastBlockedUrl.toLowerCase()) && enabled.includes(blockedItem)) {
                 toUnblock.push(blockedItem);
               }
             } catch (e) {
@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (lastBlockedUrl) {
           chrome.storage.sync.get(null, (data) => {
             const enabled = data.enabled || [];
-            const matchedPattern = enabled.find(pattern => new RegExp(pattern).test(lastBlockedUrl));
+            const matchedPattern = enabled.find(pattern => new RegExp(pattern).test(lastBlockedUrl.toLowerCase()));
             if (matchedPattern) {
               const timestamp = data[`blockedTimestamp_${getDisplayText(matchedPattern)}`];
               const duration = timestamp ? getBlockingDuration(timestamp) : "a while";

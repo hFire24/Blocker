@@ -11,12 +11,13 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       const blocked = data.blocked || [];
       const enabled = data.enabled || [];
       const blockerEnabled = data.blockerEnabled !== false; // default to true if not set
-      const fullUrl = tab.url.toLowerCase();
+      const fullUrl = tab.url;
+      const lowercaseUrl = fullUrl.toLowerCase();
 
       const isBlocked = blocked.some(blockedItem => {
         try {
           const regex = new RegExp(blockedItem);
-          return regex.test(fullUrl);
+          return regex.test(lowercaseUrl);
         } catch (e) {
           console.error('Invalid regex pattern:', blockedItem);
           return false;
@@ -26,7 +27,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       const isEnabled = enabled.some(enabledItem => {
         try {
           const regex = new RegExp(enabledItem);
-          return regex.test(fullUrl);
+          return regex.test(lowercaseUrl);
         } catch (e) {
           console.error('Invalid regex pattern:', enabledItem);
           return false;
@@ -37,7 +38,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         const matchingEnabledItem = enabled.find(enabledItem => {
           try {
             const regex = new RegExp(enabledItem);
-            return regex.test(fullUrl);
+            return regex.test(lowercaseUrl);
           } catch (e) {
             console.error('Invalid regex pattern:', enabledItem);
             return false;
@@ -79,7 +80,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         const matchingBlockedItem = blocked.find(blockedItem => {
           try {
             const regex = new RegExp(blockedItem);
-            return regex.test(fullUrl);
+            return regex.test(lowercaseUrl);
           } catch (e) {
             console.error('Invalid regex pattern:', blockedItem);
             return false;
