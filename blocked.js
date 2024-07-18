@@ -1,9 +1,9 @@
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'setBlockedUrl') {
     const url = message.url;
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDate();
 
-    chrome.storage.sync.get(['blockedCounts'], (data) => {
+    chrome.storage.local.get(['blockedCounts'], (data) => {
       const blockedCounts = data.blockedCounts || {};
       const countsForToday = blockedCounts[today] || {};
       const matchingKey = Object.keys(countsForToday).find(k => {
@@ -21,6 +21,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
   }
 });
+
+function getLocalDate() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 function waitForStorage(key, timeout = 1000) {
   return new Promise((resolve, reject) => {

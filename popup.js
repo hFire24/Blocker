@@ -21,6 +21,23 @@ document.addEventListener('DOMContentLoaded', () => {
         updateButton(!blockerEnabled);
         chrome.storage.sync.get(['favorites', 'enabled'], (data) => {
           updateBlockedList(!blockerEnabled, data.favorites || [], data.enabled || []);
+          console.log(blockerEnabled ? "BLOCKER DISABLED" : "BLOCKER ENABLED");
+          if(blockerEnabled) {
+            chrome.alarms.clearAll(() => {
+              chrome.storage.sync.get(null, (items) => {
+                let allKeys = Object.keys(items);
+                let keysToRemove = allKeys.filter(key => key.startsWith('reblock'));
+              
+                chrome.storage.sync.remove(keysToRemove, () => {
+                  if (chrome.runtime.lastError) {
+                    console.error(chrome.runtime.lastError);
+                  } else {
+                    console.log(`Removed keys: ${keysToRemove}`);
+                  }
+                });
+              });
+            });
+          }
         });
       });
     });
@@ -100,7 +117,17 @@ document.addEventListener('DOMContentLoaded', () => {
         enabled = enabled.filter(item => item !== pattern);
         itemText.classList.add('disabled');
       }
-      chrome.storage.sync.set({ enabled });
+      chrome.storage.sync.set({ enabled }, () => {
+        if (isEnabled) {
+          const alarmName = `reblock_${getDisplayText(pattern)}`;
+          chrome.alarms.clear(alarmName, (wasCleared) => {
+            if (wasCleared) {
+              console.log(`Cleared ${alarmName}`);
+              chrome.storage.sync.remove(alarmName);
+            }
+          });
+        }
+      });
     });
   }
 });

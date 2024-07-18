@@ -42,12 +42,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load blocked items from storage
   chrome.storage.sync.get(['blocked', 'enabled', 'favorites', 
   'enableConfirmMessage', 'enableReasonInput', 'enableTimeInput', 
-  'enableTempUnblocking', 'enableTempUbOptions', 'enableTempUbPopup', 'unblockDuration',
-  'blockedCounts'], (data) => {
+  'enableTempUnblocking', 'enableTempUbOptions', 'enableTempUbPopup', 'unblockDuration'], (data) => {
     const blocked = data.blocked || [];
     const enabled = data.enabled || [];
     const favorites = data.favorites || [];
-    const blockedCounts = data.blockedCounts || {};
 
     blocked.forEach(item => {
       addItemToList(item, enabled.includes(item), favorites.includes(item));
@@ -63,6 +61,10 @@ document.addEventListener('DOMContentLoaded', () => {
     ubDuration.value = data.unblockDuration !== undefined ? data.unblockDuration : 60;
 
     updateCheckboxState();
+  });
+
+  chrome.storage.local.get(['blockedCounts'], (data) => {
+    const blockedCounts = data.blockedCounts || {};
 
     // Set table
     const tableBody = document.getElementById('analyticsTableBody');
@@ -112,15 +114,35 @@ document.addEventListener('DOMContentLoaded', () => {
   confirmMessage.addEventListener('change', updateCheckboxState);
   reasonInput.addEventListener('change', saveOptions);
   timeInput.addEventListener('change', saveOptions);
-  tempUnblocking.addEventListener('change', updateCheckboxState);
+  tempUnblocking.addEventListener('change', toggleTempUnblocking);
   tempUbOptions.addEventListener('change', saveOptions);
   tempUbPopup.addEventListener('change', saveOptions);
   ubDuration.addEventListener('change', saveOptions);
 
-  function updateCheckboxState() {
-    reasonInput.disabled = !confirmMessage.checked ? true : false;
+  function toggleTempUnblocking() {
     tempUbOptions.disabled = !tempUnblocking.checked ? true : false;
     tempUbPopup.disabled = !tempUnblocking.checked ? true : false;
+    if(!tempUnblocking.checked) {
+      chrome.alarms.clearAll(() => {
+        chrome.storage.sync.get(null, (items) => {
+          let allKeys = Object.keys(items);
+          let keysToRemove = allKeys.filter(key => key.startsWith('reblock'));
+        
+          chrome.storage.sync.remove(keysToRemove, () => {
+            if (chrome.runtime.lastError) {
+              console.error(chrome.runtime.lastError);
+            } else {
+              console.log(`Removed keys: ${keysToRemove}`);
+            }
+          });
+        });
+      });
+    }
+    saveOptions();
+  }
+
+  function updateCheckboxState() {
+    reasonInput.disabled = !confirmMessage.checked ? true : false;
     saveOptions();
   }
 
@@ -297,7 +319,21 @@ document.addEventListener('DOMContentLoaded', () => {
         enabled = enabled.filter(item => item !== pattern);
         itemText.classList.add('disabled');
       }
-      chrome.storage.sync.set({ enabled });
+      chrome.storage.sync.set({ enabled }, () => {
+        if (isEnabled) {
+          const alarmName = `reblock_${getDisplayText(pattern)}`;
+          deleteAlarm(alarmName);
+        }
+      });
+    });
+  }
+
+  function deleteAlarm(alarmName) {
+    chrome.alarms.clear(alarmName, (wasCleared) => {
+      if (wasCleared) {
+        console.log(`Cleared ${alarmName}`);
+        chrome.storage.sync.remove(alarmName);
+      }
     });
   }
 
@@ -374,6 +410,9 @@ document.addEventListener('DOMContentLoaded', () => {
         favorites[favoritesIndex] = newPattern;
       }
 
+      const alarmName = `reblock_${getDisplayText(oldPattern)}`;
+      deleteAlarm(alarmName);
+
       chrome.storage.sync.set({ blocked, enabled, favorites }, () => {
         const type = newPattern.includes('^https?://') ? '🌐' : '🔍';
         const displayText = getDisplayText(newPattern);
@@ -402,9 +441,11 @@ document.addEventListener('DOMContentLoaded', () => {
       chrome.storage.sync.get(['blocked', 'enabled', 'favorites'], (data) => {
         const blocked = data.blocked.filter(item => item !== pattern);
         const enabled = data.enabled.filter(item => item !== pattern);
-        const favorites = data.favorites.filter(item => item !== pattern)
+        const favorites = data.favorites.filter(item => item !== pattern);
         chrome.storage.sync.set({ blocked, enabled, favorites }, () => {
           listItem.remove();
+          const alarmName = `reblock_${getDisplayText(pattern)}`;
+          deleteAlarm(alarmName);
         });
       });
     }
