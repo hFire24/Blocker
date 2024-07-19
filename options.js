@@ -79,11 +79,23 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
-    // Sort the array by date in descending order and then by count in descending order
+    // Function to remove "www." and "\b" from the display text
+    function removeWwwB(pattern) {
+      return pattern.replace(/^www\./, '').replace(/^\\b/, '');
+    }
+
+    // Sort the array by date in descending order, then by count in descending order, then by pattern ignoring "\b" and "www."
     blockedCountsArray.sort((a, b) => {
       const dateComparison = new Date(b.date) - new Date(a.date);
       if (dateComparison !== 0) return dateComparison;
-      return b.count - a.count;
+
+      const countComparison = b.count - a.count;
+      if (countComparison !== 0) return countComparison;
+
+      // Use getDisplayText and removeWww for the final pattern comparison
+      const patternA = removeWwwB(getDisplayText(a.pattern));
+      const patternB = removeWwwB(getDisplayText(b.pattern));
+      return patternA.localeCompare(patternB);
     });
 
     // Set table
