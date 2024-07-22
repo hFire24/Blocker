@@ -78,6 +78,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       }
     });
+
+    // Calculate the blocking duration
+    chrome.storage.sync.get('lastBlockedUrl', (data) => {
+      const lastBlockedUrl = data.lastBlockedUrl;
+      if (lastBlockedUrl) {
+        chrome.storage.sync.get(null, (data) => {
+          const enabled = data.enabled || [];
+          const matchedPattern = enabled.find(pattern => new RegExp(pattern).test(lastBlockedUrl.toLowerCase()));
+          if (matchedPattern) {
+            const timestamp = data[`blockedTimestamp_${getDisplayText(matchedPattern)}`];
+            const duration = timestamp ? getBlockingDuration(timestamp) : "a while";
+            let durationText = `It has been blocked for ${duration}.`;
+            document.getElementById('durationText').innerText = durationText;
+          }
+        });
+      }
+    });
   }, 100); // Adjust timeout as needed to ensure storage set operations are complete
 
   function getDisplayText(pattern) {
@@ -190,23 +207,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       let confirmText = "Are you sure you want to unblock this site";
       confirmText += reason === "" ? "?" : ` for the following reason: "${reason}"?`;
-  
-      // Calculate the blocking duration
-      chrome.storage.sync.get('lastBlockedUrl', (data) => {
-        const lastBlockedUrl = data.lastBlockedUrl;
-        if (lastBlockedUrl) {
-          chrome.storage.sync.get(null, (data) => {
-            const enabled = data.enabled || [];
-            const matchedPattern = enabled.find(pattern => new RegExp(pattern).test(lastBlockedUrl.toLowerCase()));
-            if (matchedPattern) {
-              const timestamp = data[`blockedTimestamp_${getDisplayText(matchedPattern)}`];
-              const duration = timestamp ? getBlockingDuration(timestamp) : "a while";
-              let durationText = `You have been blocking it for ${duration}.`;
-              document.getElementById('durationText').innerText = durationText;
-            }
-          });
-        }
-      });
   
       document.getElementById('confirmText').innerText = confirmText;
       document.querySelector('.confirm-message').style.display = 'block';
