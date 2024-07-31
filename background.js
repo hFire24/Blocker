@@ -74,7 +74,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
             });
           });
         });
-      } else if (isBlocked && !isEnabled) {
+      } else if (isBlocked && !(isEnabled && blockerEnabled)) {
         console.log("Blocked and disabled");
         // Delete the blockedTimestamp item
         const matchingBlockedItem = blocked.find(blockedItem => {
