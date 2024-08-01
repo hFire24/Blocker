@@ -37,6 +37,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
               });
             });
+          } else if(!blockerEnabled) {
+            // Add back timers from an array. Go through each one and add timers. Drop the array when done.
+            chrome.storage.sync.get(['toTimestampWhenEnabled'], (data) => {
+              const toTimestampWhenEnabled = data.toTimestampWhenEnabled || [];
+              toTimestampWhenEnabled.forEach(item => {
+                chrome.storage.sync.set({ [`blockedTimestamp_${getDisplayText(item)}`]: Date.now() });
+              });
+            });
+            chrome.storage.sync.remove('toTimestampWhenEnabled');
           }
         });
       });
