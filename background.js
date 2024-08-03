@@ -24,7 +24,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         }
       });
 
-      const isEnabled = enabled.some(enabledItem => {
+      const matchingEnabledItems = enabled.filter(enabledItem => {
         try {
           const regex = new RegExp(enabledItem);
           return regex.test(lowercaseUrl);
@@ -34,17 +34,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         }
       });
 
-      if (blockerEnabled && isBlocked && isEnabled) {
-        const matchingEnabledItem = enabled.find(enabledItem => {
-          try {
-            const regex = new RegExp(enabledItem);
-            return regex.test(lowercaseUrl);
-          } catch (e) {
-            console.error('Invalid regex pattern:', enabledItem);
-            return false;
-          }
-        });
-
+      if (blockerEnabled && isBlocked && matchingEnabledItems.length > 0) {
         chrome.storage.local.get(['blockedCounts'], (data) => {
           const today = getLocalDate();
           let blockedCounts = data.blockedCounts || {};
@@ -58,15 +48,18 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
             Object.entries(blockedCounts).filter(([date]) => date >= cutoffDate)
           );
 
-          // Add new block count
+          // Add new block counts
           if (!blockedCounts[today]) {
             blockedCounts[today] = {};
           }
-          const key = matchingEnabledItem || fullUrl;
-          if (!blockedCounts[today][key]) {
-            blockedCounts[today][key] = 0;
-          }
-          blockedCounts[today][key]++;
+
+          matchingEnabledItems.forEach(item => {
+            const key = item || fullUrl;
+            if (!blockedCounts[today][key]) {
+              blockedCounts[today][key] = 0;
+            }
+            blockedCounts[today][key]++;
+          });
 
           chrome.storage.local.set({ blockedCounts }, () => {
             chrome.storage.sync.set({ lastBlockedUrl: fullUrl }, () => {
@@ -74,7 +67,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
             });
           });
         });
-      } else if (isBlocked && !(isEnabled && blockerEnabled)) {
+      } else if (isBlocked && !(matchingEnabledItems.length > 0 && blockerEnabled)) {
         console.log("Blocked and disabled");
         // Delete the blockedTimestamp item
         const matchingBlockedItem = blocked.find(blockedItem => {
@@ -87,18 +80,16 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
           }
         });
 
-        if (matchingBlockedItem) {
-          if(isEnabled && !blockerEnabled) {
-            chrome.storage.sync.get(['toTimestampWhenEnabled'], (data) => {
-              const toTimestampWhenEnabled = data.toTimestampWhenEnabled || [];
-              if (!toTimestampWhenEnabled.includes(matchingBlockedItem)) {
-                toTimestampWhenEnabled.push(matchingBlockedItem);
-                chrome.storage.sync.set({ toTimestampWhenEnabled });
-              }
-            });
-          }
-          chrome.storage.sync.remove(`blockedTimestamp_${getDisplayText(matchingBlockedItem)}`);
-        }
+        matchingEnabledItems.forEach(item => {
+          chrome.storage.sync.get(['toTimestampWhenEnabled'], (data) => {
+            const toTimestampWhenEnabled = data.toTimestampWhenEnabled || [];
+            if (!toTimestampWhenEnabled.includes(item)) {
+              toTimestampWhenEnabled.push(item);
+              chrome.storage.sync.set({ toTimestampWhenEnabled });
+            }
+          });
+          chrome.storage.sync.remove(`blockedTimestamp_${getDisplayText(item)}`);
+        });
       }
     });
   }

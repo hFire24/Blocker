@@ -6,19 +6,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.storage.local.get(['blockedCounts'], async (data) => {
       const blockedCounts = data.blockedCounts || {};
       const countsForToday = blockedCounts[today] || {};
-      const matchingKey = Object.keys(countsForToday).find(k => {
+      const matchingKeys = Object.keys(countsForToday).filter(k => {
         try {
           const regex = new RegExp(k);
           return regex.test(url);
         } catch (e) {
           return false;
         }
-      }) || url;
-      const count = countsForToday[matchingKey] || 0;
+      }) || [url];
+      const counts = matchingKeys.map(key => countsForToday[key] || 0);
 
       try {
         await setChromeStorage({ lastBlockedUrl: url });
-        await setChromeStorage({ blockCount: { [matchingKey]: count } });
+        const blockCounts = matchingKeys.reduce((obj, key, index) => {
+          obj[key] = counts[index];
+          return obj;
+        }, {});
+        await setChromeStorage({ blockCount: blockCounts });
       } catch (error) {
         console.error('Error setting storage:', error);
       }
@@ -62,40 +66,49 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateUnblockButtonText();
   });
 
-  // Wait until storage is set before getting the data
   setTimeout(() => {
     chrome.storage.sync.get(['blockCount'], (data) => {
       const blockCount = data.blockCount;
       const blockCountMessage = document.getElementById('blockCountMessage');
       blockCountMessage.innerHTML = '';
       if (blockCount) {
-        for (const [pattern, count] of Object.entries(blockCount)) {
-          const p = document.createElement('p');
+        const blockEntries = Object.entries(blockCount);
+        const blockMessages = blockEntries.map(([pattern, count]) => {
           const displayText = getDisplayText(pattern);
           const times = (count === 1) ? 'time' : 'times';
-          p.textContent = `Website Blocker has blocked ${displayText} ${count} ${times} today.`;
-          blockCountMessage.appendChild(p);
+          return `<b>${displayText}</b> ${count} ${times}`;
+        });
+        
+        let joinedMessages;
+        if (blockMessages.length > 1) {
+          const lastMessage = blockMessages.pop();
+          joinedMessages = blockMessages.join(', ') + ', and ' + lastMessage;
+        } else {
+          joinedMessages = blockMessages.join('');
         }
+        
+        const p = document.createElement('p');
+        p.innerHTML = `Website Blocker has blocked ${joinedMessages} today.`;
+        blockCountMessage.appendChild(p);
       }
     });
 
-    // Calculate the blocking duration
     chrome.storage.sync.get('lastBlockedUrl', (data) => {
       const lastBlockedUrl = data.lastBlockedUrl;
       if (lastBlockedUrl) {
         chrome.storage.sync.get(null, (data) => {
           const enabled = data.enabled || [];
-          const matchedPattern = enabled.find(pattern => new RegExp(pattern).test(lastBlockedUrl.toLowerCase()));
-          if (matchedPattern) {
-            const timestamp = data[`blockedTimestamp_${getDisplayText(matchedPattern)}`];
-            const duration = timestamp ? getBlockingDuration(timestamp) : "a while";
-            let durationText = `It has been blocked for ${duration}.`;
-            document.getElementById('durationText').innerText = durationText;
+          const matchedPatterns = enabled.filter(pattern => new RegExp(pattern).test(lastBlockedUrl.toLowerCase()));
+          if (matchedPatterns.length > 0) {
+            const timestamps = matchedPatterns.map(pattern => data[`blockedTimestamp_${getDisplayText(pattern)}`]);
+            const durations = timestamps.map(timestamp => timestamp ? getBlockingDuration(timestamp) : "a while");
+            const durationText = durations.map((duration, index) => `<b>${getDisplayText(matchedPatterns[index])}</b> has been blocked for ${duration}.`).join("<br>");
+            document.getElementById('durationText').innerHTML = durationText;
           }
         });
       }
     });
-  }, 100); // Adjust timeout as needed to ensure storage set operations are complete
+  }, 100);
 
   function getDisplayText(pattern) {
     let displayText = pattern;
@@ -141,14 +154,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function unblockSite(duration, canTempUnblock) {
     chrome.storage.sync.get('lastBlockedUrl', (data) => {
       const lastBlockedUrl = data.lastBlockedUrl;
-  
+
       if (lastBlockedUrl) {
         chrome.storage.sync.get(['blocked', 'enabled'], async (data) => {
           const blocked = data.blocked || [];
           const enabled = data.enabled || [];
-  
+
           let toUnblock = [];
-  
+
           blocked.forEach(blockedItem => {
             try {
               const regex = new RegExp(blockedItem);
@@ -159,14 +172,11 @@ document.addEventListener('DOMContentLoaded', async () => {
               console.error('Invalid regex pattern:', blockedItem);
             }
           });
-  
-          // Remove the items to unblock from the enabled array
+
           let newEnabled = enabled.filter(enabledItem => !toUnblock.includes(enabledItem));
-  
-          // Immediately unblock by updating the enabled list
+
           await new Promise((resolve) => chrome.storage.sync.set({ enabled: newEnabled }, resolve));
-  
-          // Schedule the reblock if necessary
+
           if (!isNaN(duration) && duration > 0 && duration <= 1440 && canTempUnblock) {
             chrome.runtime.sendMessage({
               action: 'scheduleReblock',
@@ -175,12 +185,11 @@ document.addEventListener('DOMContentLoaded', async () => {
               itemsToReblock: toUnblock
             });
           }
-  
-          // Immediately navigate to the unblocked URL
+
           chrome.tabs.update({ url: lastBlockedUrl }, () => {
             chrome.storage.sync.remove('lastBlockedUrl');
           });
-  
+
         });
       } else {
         closeTab();
@@ -207,18 +216,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       let confirmText = "Are you sure you want to unblock this site";
       confirmText += reason === "" ? "?" : ` for the following reason: "${reason}"?`;
-  
+
       document.getElementById('confirmText').innerText = confirmText;
       document.querySelector('.confirm-message').style.display = 'block';
       document.querySelector('.reason-input').style.display = 'none';
     }
   }
-  
-  // Function to calculate blocking duration
+
   function getBlockingDuration(startTime) {
     const now = Date.now();
     const durationMs = now - startTime;
-    
+
     const minute = 60 * 1000;
     const hour = 60 * minute;
     const day = 24 * hour;
@@ -239,7 +247,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       return 'a while';
     }
   }
-  
 
   async function submitReason(reason) {
     reason = reason || document.getElementById('reason').value.trim();
