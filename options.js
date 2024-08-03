@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const sitesTab = document.getElementById('sitesTab');
   const blockingTab = document.getElementById('blockingTab');
   const analyticsTab = document.getElementById('analyticsTab');
-  const pocketTab = document.getElementById('pocketTab');
+  const savedUrlsTab = document.getElementById('savedUrlsTab');
   const helpTab = document.getElementById('helpTab');
 
   function openTab(tabName) {
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
   sitesTab.addEventListener('click', () => openTab('Sites'));
   blockingTab.addEventListener('click', () => openTab('Blocking'));
   analyticsTab.addEventListener('click', () => openTab('Analytics'));
-  pocketTab.addEventListener('click', () => openTab('Pocket'));
+  savedUrlsTab.addEventListener('click', () => openTab('SavedUrls'));
   helpTab.addEventListener('click', () => window.open('help.html'));
 
   const blockedList = document.getElementById('blockedSitesList');
@@ -36,13 +36,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const tempUbOptions = document.getElementById('enableTempUbOptions');
   const tempUbPopup = document.getElementById('enableTempUbPopup');
   const ubDuration = document.getElementById('ubDuration');
+  const saveTheBlockedUrls = document.getElementById('saveBlockedUrls');
 
   let draggedItem = null;
 
   // Load blocked items from storage
   chrome.storage.sync.get(['blocked', 'enabled', 'favorites', 
   'enableConfirmMessage', 'enableReasonInput', 'enableTimeInput', 
-  'enableTempUnblocking', 'enableTempUbOptions', 'enableTempUbPopup', 'unblockDuration'], (data) => {
+  'enableTempUnblocking', 'enableTempUbOptions', 'enableTempUbPopup', 'unblockDuration', 'saveBlockedUrls'], (data) => {
     const blocked = data.blocked || [];
     const enabled = data.enabled || [];
     const favorites = data.favorites || [];
@@ -59,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tempUbOptions.checked = data.enableTempUbOptions !== undefined ? data.enableTempUbOptions : false;
     tempUbPopup.checked = data.enableTempUbPopup !== undefined ? data.enableTempUbPopup : false;
     ubDuration.value = data.unblockDuration !== undefined ? data.unblockDuration : 60;
+    saveTheBlockedUrls.checked = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : true;
 
     updateCheckboxState();
   });
@@ -147,14 +149,15 @@ document.addEventListener('DOMContentLoaded', () => {
   tempUbOptions.addEventListener('change', saveOptions);
   tempUbPopup.addEventListener('change', saveOptions);
   ubDuration.addEventListener('change', saveOptions);
+  saveTheBlockedUrls.addEventListener('change', saveOptions);
 
   function toggleTempUnblocking() {
-    if(!tempUnblocking.checked) {
+    if (!tempUnblocking.checked) {
       chrome.alarms.clearAll(() => {
         chrome.storage.sync.get(null, (items) => {
           let allKeys = Object.keys(items);
           let keysToRemove = allKeys.filter(key => key.startsWith('reblock'));
-        
+
           chrome.storage.sync.remove(keysToRemove, () => {
             if (chrome.runtime.lastError) {
               console.error(chrome.runtime.lastError);
@@ -183,7 +186,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const enableTempUbOptions = tempUbOptions.disabled ? false : tempUbOptions.checked;
     const enableTempUbPopup = tempUbPopup.disabled ? false : tempUbPopup.checked;
     const unblockDuration = ubDuration.value;
-    chrome.storage.sync.set({ enableConfirmMessage, enableReasonInput, enableTimeInput, enableTempUnblocking, enableTempUbOptions, enableTempUbPopup, unblockDuration });
+    const saveBlockedUrls = saveTheBlockedUrls.checked;
+    chrome.storage.sync.set({ enableConfirmMessage, enableReasonInput, enableTimeInput, enableTempUnblocking, enableTempUbOptions, enableTempUbPopup, unblockDuration, saveBlockedUrls });
   }
 
   addUrlButton.addEventListener('click', () => {
@@ -215,11 +219,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function escapePattern(input) {
     return input.replace(/\./g, '\\.').replace(/ /g, '+');
   }
-  
+
   function isPatternTooBroad(pattern) {
     return pattern.length < 4 || pattern.includes('.*') || pattern.includes('.*?') || pattern.includes('.+');
   }
-  
+
   function addBlockedPattern(pattern, type) {
     if (isPatternTooBroad(pattern)) {
       alert("This pattern is too broad and may block unintended URLs. Please make it more specific.");
@@ -258,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
       displayText = displayText.replace("[^&]*)", '');
     }
     return displayText;
-  }  
+  }
 
   function addItemToList(pattern, isEnabled, isFavorite) {
     const listItem = document.createElement('li');
@@ -375,13 +379,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const blockedList = document.getElementById('blockedSitesList');
     const listItems = blockedList.querySelectorAll('li');
 
-    if(blockedList.querySelectorAll('button.save').length === 0) {
+    if (blockedList.querySelectorAll('button.save').length === 0) {
       listItems.forEach(li => {
         li.setAttribute('draggable', 'false');
       });
     }
     const type = oldPattern.includes('^https?://') ? '🌐' : '🔍';
-    
+
     // Create edit input
     const editInput = document.createElement('input');
     editInput.type = 'text';
@@ -401,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (newDisplayText && newDisplayText !== displayText) {
         const newPattern = newDisplayText.includes('.') ? formatPattern(newDisplayText, 'website') : formatPattern(newDisplayText, 'keyword');
-        
+
         if (!validateRegex(newPattern)) {
           alert("Invalid regular expression. Please try again.");
           revertToDisplayMode();
@@ -426,13 +430,13 @@ document.addEventListener('DOMContentLoaded', () => {
       listItem.replaceChild(itemText, editInput);
       const blockedList = document.getElementById('blockedSitesList');
       const listItems = blockedList.querySelectorAll('li');
-      
-      if(blockedList.querySelectorAll('button.save').length <= 1) {
+
+      if (blockedList.querySelectorAll('button.save').length <= 1) {
         listItems.forEach(li => {
           li.setAttribute('draggable', 'true');
         });
       }
-      
+
       const editButton = document.createElement('button');
       editButton.textContent = 'Edit';
       editButton.addEventListener('click', () => {
@@ -479,14 +483,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const displayText = getDisplayText(newPattern);
         itemText.textContent = `${type} ${displayText}`;
         listItem.replaceChild(itemText, listItem.querySelector('.edit-input'));
-        
+
         const editButton = document.createElement('button');
         editButton.textContent = 'Edit';
         editButton.addEventListener('click', () => {
           editItem(newPattern, listItem, itemText);
         });
         listItem.replaceChild(editButton, listItem.querySelector('button:nth-of-type(1)'));
-        
+
         const deleteButton = document.createElement('button');
         deleteButton.textContent = 'Delete';
         deleteButton.addEventListener('click', () => {
@@ -498,7 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function deleteItem(pattern, listItem) {
-    if(confirm("Are you sure you want to delete this item?")) {
+    if (confirm("Are you sure you want to delete this item?")) {
       chrome.storage.sync.get(['blocked', 'enabled', 'favorites'], (data) => {
         const blocked = data.blocked.filter(item => item !== pattern);
         const enabled = data.enabled.filter(item => item !== pattern);
@@ -575,4 +579,95 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
+
+  function loadSavedUrls() {
+    chrome.storage.local.get(['savedUrls'], (data) => {
+      let savedUrls = data.savedUrls || {};
+
+      // Remove entries older than 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const cutoffDate = thirtyDaysAgo.toISOString().split('T')[0];
+
+      savedUrls = Object.fromEntries(
+        Object.entries(savedUrls).filter(([date]) => date >= cutoffDate)
+      );
+
+      const savedUrlsBody = document.getElementById('savedUrlsBody');
+      savedUrlsBody.innerHTML = ''; // Clear any existing rows
+
+      // Convert savedUrls object to an array of {date, url, patterns, reason} objects
+      const savedUrlsArray = [];
+      Object.keys(savedUrls).forEach(date => {
+        savedUrls[date].forEach(entry => {
+          savedUrlsArray.push({ date, ...entry });
+        });
+      });
+
+      // Sort the array by date in descending order
+      savedUrlsArray.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      // Populate the table
+      savedUrlsArray.forEach(entry => {
+        const row = document.createElement('tr');
+        
+        const urlCell = document.createElement('td');
+        urlCell.textContent = entry.url;
+        
+        const patternsCell = document.createElement('td');
+        patternsCell.textContent = entry.patterns.map(getDisplayText).join(', ');
+        
+        const dateCell = document.createElement('td');
+        dateCell.textContent = entry.date;
+        
+        const reasonsCell = document.createElement('td');
+        reasonsCell.textContent = entry.reason;
+        
+        const deleteCell = document.createElement('td');
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = '×';
+        deleteButton.addEventListener('click', () => {
+          deleteSavedUrl(entry.date, entry.url);
+        });
+        deleteCell.appendChild(deleteButton);
+
+        row.appendChild(urlCell);
+        row.appendChild(patternsCell);
+        row.appendChild(dateCell);
+        row.appendChild(reasonsCell);
+        row.appendChild(deleteCell);
+
+        savedUrlsBody.appendChild(row);
+      });
+    });
+  }
+
+  // Function to delete a saved URL
+  function deleteSavedUrl(date, url) {
+    if(confirm(`Are you sure you want to delete ${url}`))
+    chrome.storage.local.get(['savedUrls'], (data) => {
+      let savedUrls = data.savedUrls || {};
+      if (savedUrls[date]) {
+        savedUrls[date] = savedUrls[date].filter(entry => entry.url !== url);
+        if (savedUrls[date].length === 0) {
+          delete savedUrls[date];
+        }
+        chrome.storage.local.set({ savedUrls }, () => {
+          loadSavedUrls(); // Reload the table after deletion
+        });
+      }
+    });
+  }
+
+  // Function to delete all saved URLs
+  document.getElementById('deleteAllUrlsButton').addEventListener('click', () => {
+    if(confirm(`Are you sure you want to delete all saved URLs? This cannot be undone.`)) {
+      chrome.storage.local.remove('savedUrls', () => {
+        loadSavedUrls(); // Reload the table after deletion
+      });
+    }
+  });
+
+  // Load saved URLs when the Saved URLs tab is opened
+  savedUrlsTab.addEventListener('click', loadSavedUrls);
 });

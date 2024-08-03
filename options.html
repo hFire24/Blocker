@@ -36,7 +36,7 @@
     <button id="sitesTab" class="tablinks active" data-tab="Sites">Sites</button>
     <button id="blockingTab" class="tablinks" data-tab="Blocking">Blocking</button>
     <button id="analyticsTab" class="tablinks" data-tab="Analytics">Analytics</button>
-    <button id="pocketTab" class="tablinks" data-tab="Pocket">Pocket</button>
+    <button id="savedUrlsTab" class="tablinks" data-tab="SavedUrls">Saved URLs</button>
     <button id="helpTab" class="tablinks" data-tab="Help">Help</button>
   </div>
 
@@ -79,6 +79,10 @@
       <label for="ubDuration">Default Unblocking Duration (minutes): </label>
       <input type="number" id="ubDuration" value="60" min="1" max="1440">
     </div>
+    <div>
+      <input type="checkbox" id="saveBlockedUrls">
+      <label for="saveBlockedUrls">Save Blocked URLs</label>
+    </div>
   </div>
 
   <div id="Analytics" class="tabcontent">
@@ -97,9 +101,23 @@
     </table>
   </div>
 
-  <div id="Pocket" class="tabcontent">
-    <h2>Pocket</h2>
-    <p>Coming Soon</p>
+  <div id="SavedUrls" class="tabcontent">
+    <h2>Saved URLs</h2>
+    <button id="deleteAllUrlsButton" style="margin-bottom:1rem;">Delete All</button>
+    <table>
+      <thead>
+        <tr>
+          <th>URL</th>
+          <th>Items</th>
+          <th>Date</th>
+          <th>Reasons</th>
+          <th>Delete</th>
+        </tr>
+      </thead>
+      <tbody id="savedUrlsBody">
+        <!-- Analytics data will be inserted here -->
+      </tbody>
+    </table>
   </div>
 
   <script src="options.js"></script>

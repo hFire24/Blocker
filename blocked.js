@@ -56,13 +56,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   let enableTimeInput = false;
   let enableTempUnblocking = false;
   let defaultDuration = 60;
+  let saveBlockedUrls = true;
 
-  chrome.storage.sync.get(['enableConfirmMessage', 'enableReasonInput', 'enableTempUnblocking', 'unblockDuration', 'enableTimeInput'], (data) => {
-    enableConfirmMessage = (data.enableConfirmMessage !== undefined) ? data.enableConfirmMessage : true;
-    enableReasonInput = (data.enableReasonInput !== undefined) ? data.enableReasonInput : true;
+  chrome.storage.sync.get(['enableConfirmMessage', 'enableReasonInput', 'enableTempUnblocking', 'unblockDuration', 'enableTimeInput', 'saveBlockedUrls'], (data) => {
+    enableConfirmMessage = data.enableConfirmMessage !== false;
+    enableReasonInput = data.enableReasonInput !== false;
     enableTimeInput = data.enableTimeInput || false;
     enableTempUnblocking = data.enableTempUnblocking || false;
     defaultDuration = data.unblockDuration || 60;
+    saveBlockedUrls = data.saveBlockedUrls !== false; // default to true if not set
     updateUnblockButtonText();
   });
 
@@ -78,7 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           const times = (count === 1) ? 'time' : 'times';
           return `<b>${displayText}</b> ${count} ${times}`;
         });
-        
+
         let joinedMessages;
         if (blockMessages.length > 1) {
           const lastMessage = blockMessages.pop();
@@ -86,7 +88,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
           joinedMessages = blockMessages.join('');
         }
-        
+
         const p = document.createElement('p');
         p.innerHTML = `Website Blocker has blocked ${joinedMessages} today.`;
         blockCountMessage.appendChild(p);
@@ -144,12 +146,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  function closeTab() {
-    chrome.storage.sync.remove('lastBlockedUrl');
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      chrome.tabs.remove(tabs[0].id);
+  const closeTab = () => {
+    chrome.storage.sync.get('lastBlockedUrl', (data) => {
+      const lastBlockedUrl = data.lastBlockedUrl;
+      if (saveBlockedUrls && lastBlockedUrl) {
+        chrome.storage.sync.get('enabled', (data) => {
+          const reason = document.getElementById('reason').value.trim();
+          const patterns = data.enabled.filter(pattern => new RegExp(pattern).test(lastBlockedUrl.toLowerCase()));
+          chrome.runtime.sendMessage({ action: 'saveBlockedUrl', url: lastBlockedUrl, patterns, reason });
+        });
+      }
+      chrome.storage.sync.remove('lastBlockedUrl');
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        chrome.tabs.remove(tabs[0].id);
+      });
     });
-  }  
+  };
 
   async function unblockSite(duration, canTempUnblock) {
     chrome.storage.sync.get('lastBlockedUrl', (data) => {
@@ -195,7 +207,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         closeTab();
       }
     });
-  }  
+  }
 
   async function showReasonInput() {
     if (!enableReasonInput && !enableConfirmMessage && !enableTimeInput) {
@@ -275,7 +287,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       duration = parseInt(customDurationHrsInput.value) * 60 + parseInt(customDurationInput.value);
     }
 
-    if(duration === 'forever') {
+    if (duration === 'forever') {
       await unblockSite(0, false);
     } else if (!isNaN(duration) && duration > 0 && duration <= 1440) {
       await unblockSite(parseInt(duration, 10), true);
@@ -332,7 +344,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       customDurationInput.style.display = 'inline';
       customDurationHrsInput.style.display = 'inline';
       colon.style.display = 'inline';
-      if(Math.floor(customDurationInput.value / 60) !== parseInt(customDurationHrsInput.value))
+      if (Math.floor(customDurationInput.value / 60) !== parseInt(customDurationHrsInput.value))
         customDurationHrsInput.value = Math.floor(customDurationInput.value / 60)
       customDurationInput.value = customDurationInput.value % 60;
       customDurationInput.min = '0';
@@ -350,4 +362,5 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Error in handleUnblockTime:', error);
     }
   });
-});
+  document.getElementById('cancelTimeButton').addEventListener('click', closeTab);
+  });

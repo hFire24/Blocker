@@ -7,10 +7,11 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       }
     });
   } else if (changeInfo.status === 'loading' && tab.url) {
-    chrome.storage.sync.get(['blocked', 'enabled', 'blockerEnabled'], (data) => {
+    chrome.storage.sync.get(['blocked', 'enabled', 'blockerEnabled', 'saveBlockedUrls'], (data) => {
       const blocked = data.blocked || [];
       const enabled = data.enabled || [];
       const blockerEnabled = data.blockerEnabled !== false; // default to true if not set
+      const saveBlockedUrls = data.saveBlockedUrls !== false; // default to true if not set
       const fullUrl = tab.url;
       const lowercaseUrl = fullUrl.toLowerCase();
 
@@ -63,6 +64,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
           chrome.storage.local.set({ blockedCounts }, () => {
             chrome.storage.sync.set({ lastBlockedUrl: fullUrl }, () => {
+              if (saveBlockedUrls) {
+                saveBlockedUrl(fullUrl, matchingEnabledItems);
+              }
               chrome.tabs.update(tabId, { url: chrome.runtime.getURL("blocked.html") });
             });
           });
@@ -95,6 +99,41 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 });
 
+function saveBlockedUrl(url, patterns, reason = '') {
+  const today = getLocalDate();
+  chrome.storage.local.get(['savedUrls'], (data) => {
+    let savedUrls = data.savedUrls || {};
+
+    // Remove entries older than 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const cutoffDate = thirtyDaysAgo.toISOString().split('T')[0];
+
+    savedUrls = Object.fromEntries(
+      Object.entries(savedUrls).filter(([date]) => date >= cutoffDate)
+    );
+
+    if (!savedUrls[today]) {
+      savedUrls[today] = [];
+    }
+
+    url = url.slice(0,url.indexOf('&'));
+
+    let urlEntry = savedUrls[today].find(entry => entry.url === url);
+    if (urlEntry) {
+      if (reason) {
+        urlEntry.reason = urlEntry.reason ? `${urlEntry.reason}; ${reason}` : reason;
+      }
+    } else {
+      savedUrls[today].push({ url, patterns, reason });
+    }
+
+    chrome.storage.local.set({ savedUrls }, () => {
+      console.log('Saved URLs updated', savedUrls); // For debugging
+    });
+  });
+}
+
 function getLocalDate() {
   const now = new Date();
   const year = now.getFullYear();
@@ -108,14 +147,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const { url, duration, itemsToReblock } = message;
     scheduleReblock(url, duration, itemsToReblock);
     sendResponse(); // Immediately send response
-    return true;  // Indicates we will send a response asynchronously
+  } else if (message.action === 'saveBlockedUrl') {
+    const { url, patterns, reason } = message;
+    saveBlockedUrl(url, patterns, reason);
+    sendResponse(); // Immediately send response
   }
 });
 
 function scheduleReblock(url, duration, itemsToReblock) {
   itemsToReblock.forEach(item => {
     const alarmName = `reblock_${getDisplayText(item)}`;
-    
+
     // Clear any existing alarm for the same item
     chrome.alarms.clear(alarmName, () => {
       // Create a new alarm
@@ -133,7 +175,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name.startsWith('reblock_')) {
     chrome.storage.sync.get([alarm.name], (data) => {
       const { url, item } = data[alarm.name] || {};
-      
+
       if (url && item) {
         chrome.storage.sync.get(['blocked', 'enabled'], (data) => {
           const currentBlocked = data.blocked || [];
@@ -159,7 +201,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
           }
         });
       }
-      
+
       // Clean up the storage
       chrome.storage.sync.remove(alarm.name);
     });
