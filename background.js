@@ -117,7 +117,8 @@ function saveBlockedUrl(url, patterns, reason = '') {
       savedUrls[today] = [];
     }
 
-    url = url.slice(0,url.indexOf('&'));
+    if(url.includes('&'))
+      url = url.slice(0,url.indexOf('&'));
 
     let urlEntry = savedUrls[today].find(entry => entry.url === url);
     if (urlEntry) {

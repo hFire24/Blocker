@@ -363,4 +363,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
   document.getElementById('cancelTimeButton').addEventListener('click', closeTab);
-  });
+});
