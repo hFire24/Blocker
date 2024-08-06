@@ -84,6 +84,19 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
           }
         });
 
+        if (matchingBlockedItem && matchingEnabledItems.length === 0) {
+          if(!blockerEnabled) {
+            chrome.storage.sync.get(['toTimestampWhenEnabled'], (data) => {
+              const toTimestampWhenEnabled = data.toTimestampWhenEnabled || [];
+              if (!toTimestampWhenEnabled.includes(matchingBlockedItem)) {
+                toTimestampWhenEnabled.push(matchingBlockedItem);
+                chrome.storage.sync.set({ toTimestampWhenEnabled });
+              }
+            });
+          }
+          chrome.storage.sync.remove(`blockedTimestamp_${getDisplayText(matchingBlockedItem)}`);
+        }
+
         matchingEnabledItems.forEach(item => {
           chrome.storage.sync.get(['toTimestampWhenEnabled'], (data) => {
             const toTimestampWhenEnabled = data.toTimestampWhenEnabled || [];
