@@ -65,62 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCheckboxState();
   });
 
-  chrome.storage.local.get(['blockedCounts'], (data) => {
-    const blockedCounts = data.blockedCounts || {};
-
-    // Convert the blockedCounts object to an array for sorting
-    const blockedCountsArray = [];
-    Object.keys(blockedCounts).forEach(date => {
-      const countsForDate = blockedCounts[date];
-      Object.keys(countsForDate).forEach(pattern => {
-        blockedCountsArray.push({
-          date: date,
-          pattern: pattern,
-          count: countsForDate[pattern]
-        });
-      });
-    });
-
-    // Function to remove "www." and "\b" from the display text
-    function removeWwwB(pattern) {
-      return pattern.replace(/^www\./, '').replace(/^\\b/, '');
-    }
-
-    // Sort the array by date in descending order, then by count in descending order, then by pattern ignoring "\b" and "www."
-    blockedCountsArray.sort((a, b) => {
-      const dateComparison = new Date(b.date) - new Date(a.date);
-      if (dateComparison !== 0) return dateComparison;
-
-      const countComparison = b.count - a.count;
-      if (countComparison !== 0) return countComparison;
-
-      // Use getDisplayText and removeWww for the final pattern comparison
-      const patternA = removeWwwB(getDisplayText(a.pattern));
-      const patternB = removeWwwB(getDisplayText(b.pattern));
-      return patternA.localeCompare(patternB);
-    });
-
-    // Set table
-    const tableBody = document.getElementById('analyticsTableBody');
-    tableBody.innerHTML = '';
-
-    blockedCountsArray.forEach(entry => {
-      const row = document.createElement('tr');
-      const patternCell = document.createElement('td');
-      const dateCell = document.createElement('td');
-      const countCell = document.createElement('td');
-
-      patternCell.textContent = getDisplayText(entry.pattern);
-      dateCell.textContent = entry.date;
-      countCell.textContent = entry.count;
-
-      row.appendChild(patternCell);
-      row.appendChild(dateCell);
-      row.appendChild(countCell);
-      tableBody.appendChild(row);
-    });
-  });
-
   // Listen for changes in chrome.storage and update the blocked list in real time
   chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'sync' && (changes.enabled || changes.blocked)) {
@@ -580,14 +524,75 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function loadAnalytics() {
+    chrome.storage.local.get(['blockedCounts'], (data) => {
+      const blockedCounts = data.blockedCounts || {};
+  
+      // Convert the blockedCounts object to an array for sorting
+      const blockedCountsArray = [];
+      Object.keys(blockedCounts).forEach(date => {
+        const countsForDate = blockedCounts[date];
+        Object.keys(countsForDate).forEach(pattern => {
+          blockedCountsArray.push({
+            date: date,
+            pattern: pattern,
+            count: countsForDate[pattern]
+          });
+        });
+      });
+  
+      // Function to remove "www." and "\b" from the display text
+      function removeWwwB(pattern) {
+        return pattern.replace(/^www\./, '').replace(/^\\b/, '');
+      }
+  
+      // Sort the array by date in descending order, then by count in descending order, then by pattern ignoring "\b" and "www."
+      blockedCountsArray.sort((a, b) => {
+        const dateComparison = new Date(b.date) - new Date(a.date);
+        if (dateComparison !== 0) return dateComparison;
+  
+        const countComparison = b.count - a.count;
+        if (countComparison !== 0) return countComparison;
+  
+        // Use getDisplayText and removeWww for the final pattern comparison
+        const patternA = removeWwwB(getDisplayText(a.pattern));
+        const patternB = removeWwwB(getDisplayText(b.pattern));
+        return patternA.localeCompare(patternB);
+      });
+  
+      // Set table
+      const tableBody = document.getElementById('analyticsTableBody');
+      tableBody.innerHTML = '';
+  
+      blockedCountsArray.forEach(entry => {
+        const row = document.createElement('tr');
+        const patternCell = document.createElement('td');
+        const dateCell = document.createElement('td');
+        const countCell = document.createElement('td');
+  
+        patternCell.textContent = getDisplayText(entry.pattern);
+        dateCell.textContent = entry.date;
+        countCell.textContent = entry.count;
+  
+        row.appendChild(patternCell);
+        row.appendChild(dateCell);
+        row.appendChild(countCell);
+        tableBody.appendChild(row);
+      });
+    });
+  }
+
+  // Load analytics when the Analytics tab is opened
+  analyticsTab.addEventListener('click', loadAnalytics);
+
   function loadSavedUrls() {
     chrome.storage.local.get(['savedUrls'], (data) => {
       let savedUrls = data.savedUrls || {};
 
-      // Remove entries older than 30 days
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const cutoffDate = thirtyDaysAgo.toISOString().split('T')[0];
+      // Remove entries older than 7 days
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const cutoffDate = sevenDaysAgo.toISOString().split('T')[0];
 
       savedUrls = Object.fromEntries(
         Object.entries(savedUrls).filter(([date]) => date >= cutoffDate)
@@ -621,7 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dateCell.textContent = entry.date;
         
         const reasonsCell = document.createElement('td');
-        reasonsCell.textContent = entry.reason;
+        reasonsCell.innerText = entry.reason.replace(/; /g, '\n');
         
         const deleteCell = document.createElement('td');
         const deleteButton = document.createElement('button');
@@ -644,7 +649,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Function to delete a saved URL
   function deleteSavedUrl(date, url) {
-    if(confirm(`Are you sure you want to delete ${url}`))
     chrome.storage.local.get(['savedUrls'], (data) => {
       let savedUrls = data.savedUrls || {};
       if (savedUrls[date]) {

@@ -146,25 +146,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  const closeTab = () => {
+  const saveUrl = () => {
     chrome.storage.sync.get('lastBlockedUrl', (data) => {
       const lastBlockedUrl = data.lastBlockedUrl;
-      if (saveBlockedUrls && lastBlockedUrl) {
+      if (lastBlockedUrl) {
         chrome.storage.sync.get('enabled', (data) => {
-          const reason = document.getElementById('reason').value.trim();
           const patterns = data.enabled.filter(pattern => new RegExp(pattern).test(lastBlockedUrl.toLowerCase()));
-          chrome.runtime.sendMessage({ action: 'saveBlockedUrl', url: lastBlockedUrl, patterns, reason });
+          
+          // Use a promise to ensure the message is sent before closing the tab
+          const sendMessagePromise = new Promise((resolve, reject) => {
+            chrome.runtime.sendMessage({ action: 'saveBlockedUrl', url: lastBlockedUrl, patterns }, (response) => {
+              if (chrome.runtime.lastError) {
+                reject(chrome.runtime.lastError);
+              } else {
+                resolve(response);
+              }
+            });
+          });
+  
+          sendMessagePromise.finally(() => {
+            closeTab();
+          });
         });
+      } else {
+        closeTab();
       }
-      chrome.storage.sync.remove('lastBlockedUrl');
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        chrome.tabs.remove(tabs[0].id);
-      });
+    });
+  };
+  
+  const closeTab = () => {
+    chrome.storage.sync.remove('lastBlockedUrl');
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      chrome.tabs.remove(tabs[0].id);
     });
   };
 
   async function unblockSite(duration, canTempUnblock) {
-    chrome.storage.sync.get('lastBlockedUrl', (data) => {
+    chrome.storage.sync.get('lastBlockedUrl', async (data) => {
       const lastBlockedUrl = data.lastBlockedUrl;
 
       if (lastBlockedUrl) {
@@ -198,10 +216,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
           }
 
+          if(saveBlockedUrls) {
+            // Use a promise to ensure the message is sent before closing the tab
+            const patterns = enabled.filter(pattern => new RegExp(pattern).test(lastBlockedUrl.toLowerCase()));
+            await new Promise((resolve) => chrome.runtime.sendMessage({ action: 'saveBlockedUrl', url: lastBlockedUrl, patterns }, resolve));
+          }
           chrome.tabs.update({ url: lastBlockedUrl }, () => {
             chrome.storage.sync.remove('lastBlockedUrl');
           });
-
         });
       } else {
         closeTab();
@@ -210,12 +232,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function showReasonInput() {
+    chrome.storage.local.remove('reason');
     if (!enableReasonInput && !enableConfirmMessage && !enableTimeInput) {
       await unblockSite(defaultDuration, enableTempUnblocking);
     } else {
       document.querySelector('.default-buttons').style.display = 'none';
       if (!enableReasonInput) {
-        await submitReason('');
+        await submitReason(true, '');
       } else {
         document.querySelector('.reason-input').style.display = 'block';
       }
@@ -260,9 +283,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  async function submitReason(reason) {
+  async function submitReason(nextStep, reason) {
     reason = reason || document.getElementById('reason').value.trim();
-    await showConfirmMessage(reason);
+    nextStep = nextStep || false;
+    if (reason !== '')
+      chrome.storage.local.set({ reason });
+    nextStep ? await showConfirmMessage(reason) : saveBlockedUrls ? await saveUrl() : await closeTab();
   }
 
   async function showTimeInput() {
@@ -303,19 +329,31 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Error in unblock:', error);
     }
   });
-  document.getElementById('focusButton').addEventListener('click', closeTab);
-  document.getElementById('submitReasonButton').addEventListener('click', async () => {
+  document.getElementById('focusButton').addEventListener('click', async () => {
     try {
-      await submitReason();
+      await submitReason(false, '');
     } catch (error) {
       console.error('Error in submitReason:', error);
     }
   });
-  document.getElementById('cancelReasonButton').addEventListener('click', closeTab);
+  document.getElementById('submitReasonButton').addEventListener('click', async () => {
+    try {
+      await submitReason(true);
+    } catch (error) {
+      console.error('Error in submitReason:', error);
+    }
+  });
+  document.getElementById('cancelReasonButton').addEventListener('click', async () => {
+    try {
+      await submitReason(false);
+    } catch (error) {
+      console.error('Error in submitReason:', error)
+    }
+  });
   document.getElementById('reason').addEventListener('keypress', async (event) => {
     if (event.key === 'Enter') {
       try {
-        await submitReason();
+        await submitReason(true);
       } catch (error) {
         console.error('Error submitting reason:', error);
       }
@@ -328,7 +366,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Error in showTimeInput:', error);
     }
   });
-  document.getElementById('cancelUnblockButton').addEventListener('click', closeTab);
+  document.getElementById('cancelUnblockButton').addEventListener('click', async () => {
+    try {
+      saveBlockedUrls ? await saveUrl() : await closeTab();
+    } catch (error) {
+      console.error('Error in closeTab:', error)
+    }
+  });
   document.getElementById('unblockDuration').addEventListener('change', (event) => {
     const customDurationInput = document.getElementById('customDuration');
     const customDurationHrsInput = document.getElementById('customDurationHrs');
@@ -362,5 +406,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Error in handleUnblockTime:', error);
     }
   });
-  document.getElementById('cancelTimeButton').addEventListener('click', closeTab);
+  document.getElementById('cancelTimeButton').addEventListener('click', async () => {
+    try {
+      saveBlockedUrls ? await saveUrl() : await closeTab();
+    } catch (error) {
+      console.error('Error in closeTab:', error)
+    }
+  });
 });

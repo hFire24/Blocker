@@ -64,17 +64,13 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
           chrome.storage.local.set({ blockedCounts }, () => {
             chrome.storage.sync.set({ lastBlockedUrl: fullUrl }, () => {
-              if (saveBlockedUrls) {
-                saveBlockedUrl(fullUrl, matchingEnabledItems);
-              }
               chrome.tabs.update(tabId, { url: chrome.runtime.getURL("blocked.html") });
             });
           });
         });
       } else if (isBlocked && !(matchingEnabledItems.length > 0 && blockerEnabled)) {
-        console.log("Blocked and disabled");
         // Delete the blockedTimestamp item
-        const matchingBlockedItem = blocked.find(blockedItem => {
+        const matchingBlockedItems = blocked.filter(blockedItem => {
           try {
             const regex = new RegExp(blockedItem);
             return regex.test(lowercaseUrl);
@@ -84,43 +80,36 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
           }
         });
 
-        if (matchingBlockedItem && matchingEnabledItems.length === 0) {
+        matchingBlockedItems.forEach(item => {
+          chrome.storage.sync.remove(`blockedTimestamp_${getDisplayText(item)}`);
+        });
+
+        matchingEnabledItems.forEach(item => {
           if(!blockerEnabled) {
             chrome.storage.sync.get(['toTimestampWhenEnabled'], (data) => {
               const toTimestampWhenEnabled = data.toTimestampWhenEnabled || [];
-              if (!toTimestampWhenEnabled.includes(matchingBlockedItem)) {
-                toTimestampWhenEnabled.push(matchingBlockedItem);
+              if (!toTimestampWhenEnabled.includes(item)) {
+                toTimestampWhenEnabled.push(item);
                 chrome.storage.sync.set({ toTimestampWhenEnabled });
               }
             });
           }
-          chrome.storage.sync.remove(`blockedTimestamp_${getDisplayText(matchingBlockedItem)}`);
-        }
-
-        matchingEnabledItems.forEach(item => {
-          chrome.storage.sync.get(['toTimestampWhenEnabled'], (data) => {
-            const toTimestampWhenEnabled = data.toTimestampWhenEnabled || [];
-            if (!toTimestampWhenEnabled.includes(item)) {
-              toTimestampWhenEnabled.push(item);
-              chrome.storage.sync.set({ toTimestampWhenEnabled });
-            }
-          });
-          chrome.storage.sync.remove(`blockedTimestamp_${getDisplayText(item)}`);
         });
       }
     });
   }
 });
 
-function saveBlockedUrl(url, patterns, reason = '') {
+function saveBlockedUrl(url, patterns) {
   const today = getLocalDate();
-  chrome.storage.local.get(['savedUrls'], (data) => {
+  chrome.storage.local.get(['savedUrls', 'reason'], (data) => {
     let savedUrls = data.savedUrls || {};
+    let reason = data.reason || '';
 
-    // Remove entries older than 30 days
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const cutoffDate = thirtyDaysAgo.toISOString().split('T')[0];
+    // Remove entries older than 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const cutoffDate = sevenDaysAgo.toISOString().split('T')[0];
 
     savedUrls = Object.fromEntries(
       Object.entries(savedUrls).filter(([date]) => date >= cutoffDate)
@@ -130,13 +119,17 @@ function saveBlockedUrl(url, patterns, reason = '') {
       savedUrls[today] = [];
     }
 
-    if(url.includes('&'))
-      url = url.slice(0,url.indexOf('&'));
+    if (url.includes('&'))
+      url = url.slice(0, url.indexOf('&'));
 
     let urlEntry = savedUrls[today].find(entry => entry.url === url);
     if (urlEntry) {
       if (reason) {
-        urlEntry.reason = urlEntry.reason ? `${urlEntry.reason}; ${reason}` : reason;
+        const existingReasons = urlEntry.reason ? urlEntry.reason.split('; ') : [];
+        if (!existingReasons.includes(reason)) {
+          existingReasons.push(reason);
+        }
+        urlEntry.reason = existingReasons.join('; ');
       }
     } else {
       savedUrls[today].push({ url, patterns, reason });
