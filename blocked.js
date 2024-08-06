@@ -110,6 +110,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
       }
     });
+
+    chrome.storage.local.remove('reason');
   }, 100);
 
   function getDisplayText(pattern) {
@@ -232,7 +234,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function showReasonInput() {
-    chrome.storage.local.remove('reason');
     if (!enableReasonInput && !enableConfirmMessage && !enableTimeInput) {
       await unblockSite(defaultDuration, enableTempUnblocking);
     } else {
