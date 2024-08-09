@@ -204,6 +204,19 @@ chrome.alarms.onAlarm.addListener((alarm) => {
             chrome.storage.sync.set({ enabled: updatedEnabled, [`blockedTimestamp_${getDisplayText(item)}`]: Date.now() }, () => {
               console.log(`Reblocked item: ${item}`);
             });
+            const now = Date.now();
+            const alarmTime = alarm.scheduledTime;
+            const bufferTime = 5000; // 5 seconds buffer
+
+            if (now <= alarmTime + bufferTime) {
+              // Show notification
+              chrome.notifications.create({
+                type: 'basic',
+                iconUrl: 'icon48.png',
+                title: 'Website Reblocked',
+                message: `${getDisplayText(item)} has been reblocked.`
+              });
+            }
           }
         });
       }
