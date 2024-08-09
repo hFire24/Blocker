@@ -55,16 +55,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   let enableReasonInput = true;
   let enableTimeInput = false;
   let enableTempUnblocking = false;
-  let defaultDuration = 60;
-  let saveBlockedUrls = true;
+  let defaultDuration = 5;
+  let saveBlockedUrls = 'ask';
+  let saveUnblockedUrls = true;
 
-  chrome.storage.sync.get(['enableConfirmMessage', 'enableReasonInput', 'enableTempUnblocking', 'unblockDuration', 'enableTimeInput', 'saveBlockedUrls'], (data) => {
+  chrome.storage.sync.get(['enableConfirmMessage', 'enableReasonInput', 'enableTempUnblocking', 'unblockDuration', 'enableTimeInput',
+    'saveBlockedUrls', 'saveUnblockedUrls'], (data) => {
     enableConfirmMessage = data.enableConfirmMessage !== false;
     enableReasonInput = data.enableReasonInput !== false;
     enableTimeInput = data.enableTimeInput || false;
     enableTempUnblocking = data.enableTempUnblocking || false;
-    defaultDuration = data.unblockDuration || 60;
-    saveBlockedUrls = data.saveBlockedUrls !== false; // default to true if not set
+    defaultDuration = data.unblockDuration || 5;
+    saveBlockedUrls = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : 'ask'; // default to ask if not set
+    saveUnblockedUrls = data.saveUnblockedUrls !== false;
     updateUnblockButtonText();
   });
 
@@ -98,6 +101,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     chrome.storage.sync.get('lastBlockedUrl', (data) => {
       const lastBlockedUrl = data.lastBlockedUrl;
       if (lastBlockedUrl) {
+        document.getElementById("url").innerHTML = lastBlockedUrl;
         chrome.storage.sync.get(null, (data) => {
           const enabled = data.enabled || [];
           const matchedPatterns = enabled.filter(pattern => new RegExp(pattern).test(lastBlockedUrl.toLowerCase()));
@@ -218,7 +222,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
           }
 
-          if(saveBlockedUrls) {
+          if(saveUnblockedUrls) {
             // Use a promise to ensure the message is sent before closing the tab
             const patterns = enabled.filter(pattern => new RegExp(pattern).test(lastBlockedUrl.toLowerCase()));
             await new Promise((resolve) => chrome.runtime.sendMessage({ action: 'saveBlockedUrl', url: lastBlockedUrl, patterns }, resolve));
@@ -246,16 +250,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  async function showConfirmMessage(reason) {
+  async function showConfirmMessage() {
     if (!enableConfirmMessage) {
       await showTimeInput();
     } else {
       let confirmText = "Are you sure you want to unblock this site";
+      let reason = document.getElementById('reason').value.trim();
       confirmText += reason === "" ? "?" : ` for the following reason: "${reason}"?`;
 
       document.getElementById('confirmText').innerText = confirmText;
       document.querySelector('.confirm-message').style.display = 'block';
       document.querySelector('.reason-input').style.display = 'none';
+      /*if (!enableTimeInput) {
+        document.getElementById('backTimeButton').style.display = 'none';
+      }*/
     }
   }
 
@@ -289,7 +297,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     nextStep = nextStep || false;
     if (reason !== '')
       chrome.storage.local.set({ reason });
-    nextStep ? await showConfirmMessage(reason) : saveBlockedUrls ? await saveUrl() : await closeTab();
+    nextStep ? await showConfirmMessage() : showAskToSave();
+  }
+
+  function showAskToSave() {
+    switch(saveBlockedUrls) {
+      case 'always':
+        saveUrl();
+        break;
+      case 'never':
+        closeTab();
+        break;
+      default:
+        document.querySelector('.default-buttons').style.display = 'none';
+        document.querySelector('.reason-input').style.display = 'none';
+        document.querySelector('.time-input').style.display = 'none';
+        document.querySelector('.confirm-message').style.display = 'none';
+        document.querySelector('.save-message').style.display = 'block';
+    }
   }
 
   async function showTimeInput() {
@@ -297,6 +322,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       await unblockSite(defaultDuration, enableTempUnblocking);
     } else {
       document.getElementById('customDuration').value = defaultDuration.toString();
+      document.querySelector('.reason-input').style.display = 'none';
       document.querySelector('.confirm-message').style.display = 'none';
       document.querySelector('.time-input').style.display = 'block';
     }
@@ -360,20 +386,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
   });
-  document.getElementById('confirmUnblockButton').addEventListener('click', async () => {
-    try {
-      await showTimeInput();
-    } catch (error) {
-      console.error('Error in showTimeInput:', error);
-    }
-  });
-  document.getElementById('cancelUnblockButton').addEventListener('click', async () => {
-    try {
-      saveBlockedUrls ? await saveUrl() : await closeTab();
-    } catch (error) {
-      console.error('Error in closeTab:', error)
-    }
-  });
   document.getElementById('unblockDuration').addEventListener('change', (event) => {
     const customDurationInput = document.getElementById('customDuration');
     const customDurationHrsInput = document.getElementById('customDurationHrs');
@@ -409,7 +421,35 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('cancelTimeButton').addEventListener('click', async () => {
     try {
-      saveBlockedUrls ? await saveUrl() : await closeTab();
+      await showAskToSave();
+    } catch (error) {
+      console.error('Error in showAskToSave:', error)
+    }
+  });
+  document.getElementById('confirmUnblockButton').addEventListener('click', async () => {
+    try {
+      await showTimeInput();
+    } catch (error) {
+      console.error('Error in showTimeInput:', error);
+    }
+  });
+  document.getElementById('cancelUnblockButton').addEventListener('click', async () => {
+    try {
+      await showAskToSave();
+    } catch (error) {
+      console.error('Error in showAskToSave:', error)
+    }
+  });
+  document.getElementById('confirmSaveButton').addEventListener('click', async () => {
+    try {
+      await saveUrl();
+    } catch (error) {
+      console.error('Error in showTimeInput:', error);
+    }
+  });
+  document.getElementById('cancelSaveButton').addEventListener('click', async () => {
+    try {
+      closeTab();
     } catch (error) {
       console.error('Error in closeTab:', error)
     }

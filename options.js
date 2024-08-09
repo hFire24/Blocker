@@ -36,14 +36,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const tempUbOptions = document.getElementById('enableTempUbOptions');
   const tempUbPopup = document.getElementById('enableTempUbPopup');
   const ubDuration = document.getElementById('ubDuration');
-  const saveTheBlockedUrls = document.getElementById('saveBlockedUrls');
+  const blockUrlSelect = document.getElementById('blockUrlSelect');
+  const saveUnblocks = document.getElementById('saveUnblocks');
 
   let draggedItem = null;
 
   // Load blocked items from storage
   chrome.storage.sync.get(['blocked', 'enabled', 'favorites', 
   'enableConfirmMessage', 'enableReasonInput', 'enableTimeInput', 
-  'enableTempUnblocking', 'enableTempUbOptions', 'enableTempUbPopup', 'unblockDuration', 'saveBlockedUrls'], (data) => {
+  'enableTempUnblocking', 'enableTempUbOptions', 'enableTempUbPopup', 'unblockDuration', 'saveBlockedUrls', 'saveUnblockedUrls'], (data) => {
     const blocked = data.blocked || [];
     const enabled = data.enabled || [];
     const favorites = data.favorites || [];
@@ -60,7 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
     tempUbOptions.checked = data.enableTempUbOptions !== undefined ? data.enableTempUbOptions : false;
     tempUbPopup.checked = data.enableTempUbPopup !== undefined ? data.enableTempUbPopup : false;
     ubDuration.value = data.unblockDuration !== undefined ? data.unblockDuration : 60;
-    saveTheBlockedUrls.checked = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : true;
+    blockUrlSelect.value = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : "ask";
+    saveUnblocks.checked = data.saveUnblockedUrls !== undefined ? data.saveUnblockedUrls : true;
 
     updateCheckboxState();
   });
@@ -86,14 +88,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Event listeners for blocking options
-  confirmMessage.addEventListener('change', updateCheckboxState);
+  confirmMessage.addEventListener('change', saveOptions);
   reasonInput.addEventListener('change', saveOptions);
   timeInput.addEventListener('change', saveOptions);
   tempUnblocking.addEventListener('change', toggleTempUnblocking);
   tempUbOptions.addEventListener('change', saveOptions);
   tempUbPopup.addEventListener('change', saveOptions);
   ubDuration.addEventListener('change', saveOptions);
-  saveTheBlockedUrls.addEventListener('change', saveOptions);
+  blockUrlSelect.addEventListener('change', saveOptions);
+  saveUnblocks.addEventListener('change', saveOptions);
 
   function toggleTempUnblocking() {
     if (!tempUnblocking.checked) {
@@ -116,7 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateCheckboxState() {
-    reasonInput.disabled = !confirmMessage.checked ? true : false;
     tempUbOptions.disabled = !tempUnblocking.checked ? true : false;
     tempUbPopup.disabled = !tempUnblocking.checked ? true : false;
     saveOptions();
@@ -124,14 +126,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function saveOptions() {
     const enableConfirmMessage = confirmMessage.checked;
-    const enableReasonInput = reasonInput.disabled ? false : reasonInput.checked;
+    const enableReasonInput = reasonInput.checked;
     const enableTimeInput = timeInput.checked;
     const enableTempUnblocking = tempUnblocking.checked;
     const enableTempUbOptions = tempUbOptions.disabled ? false : tempUbOptions.checked;
     const enableTempUbPopup = tempUbPopup.disabled ? false : tempUbPopup.checked;
     const unblockDuration = ubDuration.value;
-    const saveBlockedUrls = saveTheBlockedUrls.checked;
-    chrome.storage.sync.set({ enableConfirmMessage, enableReasonInput, enableTimeInput, enableTempUnblocking, enableTempUbOptions, enableTempUbPopup, unblockDuration, saveBlockedUrls });
+    const saveBlockedUrls = blockUrlSelect.value;
+    const saveUnblockedUrls = saveUnblocks.checked;
+    chrome.storage.sync.set({ enableConfirmMessage, enableReasonInput, enableTimeInput,
+      enableTempUnblocking, enableTempUbOptions, enableTempUbPopup, unblockDuration, saveBlockedUrls, saveUnblockedUrls });
   }
 
   addUrlButton.addEventListener('click', () => {

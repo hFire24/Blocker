@@ -55,13 +55,13 @@
       <input type="checkbox" id="enableConfirmMessage">
       <label for="enableConfirmMessage">Enable Confirm Message</label>
     </div>
-    <div class="indented">
+    <div>
       <input type="checkbox" id="enableReasonInput">
       <label for="enableReasonInput">Enable Reason Input</label>
     </div>
     <div>
       <input type="checkbox" id="enableTimeInput">
-      <label for="enableTimeInput">Enable Unblocking Time Input on Blocked page</label>
+      <label for="enableTimeInput">Enable Time Input on Blocked page</label>
     </div>
     <div>
       <input type="checkbox" id="enableTempUnblocking">
@@ -77,11 +77,19 @@
     </div>
     <div class="indented">
       <label for="ubDuration">Default Unblocking Duration (minutes): </label>
-      <input type="number" id="ubDuration" value="60" min="1" max="1440">
+      <input type="number" id="ubDuration" value="5" min="1" max="1440">
     </div>
     <div>
-      <input type="checkbox" id="saveBlockedUrls">
-      <label for="saveBlockedUrls">Save Blocked URLs</label>
+      <label for="blockUrlSelect">Save Blocked URLs</label>
+      <select id="blockUrlSelect">
+        <option value="always">Always</option>
+        <option value="ask">Ask (Default)</option>
+        <option value="never">Never</option>
+      </select>
+    </div>
+    <div>
+      <input type="checkbox" id="saveUnblocks">
+      <label for="saveUnblocks">Save Unblocked URLs</label>
     </div>
   </div>
 
@@ -118,6 +126,7 @@
         <!-- Analytics data will be inserted here -->
       </tbody>
     </table>
+    <p>All saved URLs older than 7 days get permanently deleted.</p>
   </div>
 
   <script src="options.js"></script>

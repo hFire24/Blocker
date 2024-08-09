@@ -77,7 +77,8 @@
     }
     .reason-input,
     .confirm-message,
-    .time-input {
+    .time-input,
+    .save-message {
       display: none;
       margin-top: 20px;
       color: #ccc;
@@ -105,7 +106,7 @@
   <div class="blocked-message">
     <h1>Website Blocked</h1>
     <p>The website you are trying to visit is blocked.</p>
-    <div id="blockCountMessage"></div>
+    <p id="blockCountMessage"></p>
     <p id="durationText"></p>
     <div class="default-buttons">
       <button id="unblockButton" class="unblock-button"><span id="unblockEmoji">🔓</span> <span id="unblockText">Unblock and Continue</span></button>
@@ -116,11 +117,6 @@
       <input type="text" id="reason" placeholder="Insert reason here">
       <button id="submitReasonButton" class="submit-reason-button">Submit</button>
       <button id="cancelReasonButton" class="cancel-reason-button">Close</button>
-    </div>
-    <div class="confirm-message">
-      <h2 id="confirmText"></h2>
-      <button id="confirmUnblockButton" class="confirm-unblock-button"><span id="unblockEmojiTwo">🔓</span> Yes, Unblock</button>
-      <button id="cancelUnblockButton" class="focus-button">🔒 Cancel</button>
     </div>
     <div class="time-input">
       <h2>How long should this website be unblocked for?</h2>
@@ -143,6 +139,18 @@
       <input type="number" id="customDuration" min="1" max="1440" style="display:inline;">
       <button id="unblockTimeButton" class="unblock-time-button">Unblock and Continue</button>
       <button id="cancelTimeButton" class="focus-button">Cancel</button>
+    </div>
+    <div class="confirm-message">
+      <h2 id="confirmText"></h2>
+      <button id="confirmUnblockButton" class="confirm-unblock-button"><span id="unblockEmojiTwo">🔓</span>  Yes, Unblock</button>
+      <!--button id="backTimeButton" class="submit-reason-button" style="display:inline;">⏳ No, Adjust Time</button-->
+      <button id="cancelUnblockButton" class="focus-button">🔒 No, Remain Focused</button>
+    </div>
+    <div class="save-message">
+      <h2 id="saveText">Would you like to save this URL for later?</h2>
+      <p id="url"></p>
+      <button id="confirmSaveButton" class="confirm-unblock-button">💾 Yes</button>
+      <button id="cancelSaveButton" class="cancel-reason-button">❌ No</button>
     </div>
   </div>
   <script src="blocked.js"></script>
