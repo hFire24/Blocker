@@ -78,12 +78,13 @@
     .reason-input,
     .confirm-message,
     .time-input,
-    .save-message {
+    .save-message,
+    .save-reason-input {
       display: none;
       margin-top: 20px;
       color: #ccc;
     }
-    .reason-input input {
+    .reason-input input, .save-reason-input input {
       padding: 10px;
       font-size: 1rem;
       width: 80%;
@@ -150,8 +151,19 @@
     <div class="save-message">
       <h2 id="saveText">Would you like to save this URL for later?</h2>
       <p id="url"></p>
-      <button id="confirmSaveButton" class="confirm-unblock-button">💾 Yes</button>
-      <button id="cancelSaveButton" class="cancel-reason-button">❌ No</button>
+      <span id="fromDefaultButtons" style="display:none;">
+        <button id="confirmSaveButtonReason" class="unblock-time-button">📝 Yes, Give Reason</button>
+        <button id="confirmSaveButtonNoReason" class="confirm-unblock-button">💾 Yes, No Reason</button>
+      </span>
+      <span id="fromOtherButtons" style="display:inline;">
+        <button id="confirmSaveButton" class="confirm-unblock-button">💾 Yes</button>
+      </span>
+      <button id="cancelSaveButton" class="focus-button">🗑️ No</button>
+    </div>
+    <div class="save-reason-input">
+      <h2>Why did you decide to go to this site?</h2>
+      <input type="text" id="saveReason" placeholder="Insert reason here">
+      <button id="saveReasonButton" class="submit-reason-button">Submit</button>
     </div>
   </div>
   <script src="blocked.js"></script>

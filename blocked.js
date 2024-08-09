@@ -58,6 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let duration = 5;
   let saveBlockedUrls = 'ask';
   let saveUnblockedUrls = true;
+  let reason = '';
 
   chrome.storage.sync.get(['enableConfirmMessage', 'enableReasonInput', 'enableTempUnblocking', 'unblockDuration', 'enableTimeInput',
     'saveBlockedUrls', 'saveUnblockedUrls'], (data) => {
@@ -114,8 +115,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
       }
     });
-
-    chrome.storage.local.remove('reason');
   }, 100);
 
   function getDisplayText(pattern) {
@@ -155,7 +154,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           
           // Use a promise to ensure the message is sent before closing the tab
           const sendMessagePromise = new Promise((resolve, reject) => {
-            chrome.runtime.sendMessage({ action: 'saveBlockedUrl', url: lastBlockedUrl, patterns }, (response) => {
+            chrome.runtime.sendMessage({ action: 'saveBlockedUrl', url: lastBlockedUrl, patterns, reason }, (response) => {
               if (chrome.runtime.lastError) {
                 reject(chrome.runtime.lastError);
               } else {
@@ -216,17 +215,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
           }
 
-          chrome.storage.local.get(['reason'], async (data) => {
-            let newReason = data.reason
-            if(newReason !== undefined) {
-              newReason = data.reason + '*';
-              await new Promise((resolve) => chrome.storage.local.set({ reason: newReason }, resolve));
-            }
-          });
+          reason += '*';
   
           if (saveUnblockedUrls) {
             const patterns = enabled.filter(pattern => new RegExp(pattern).test(lastBlockedUrl.toLowerCase()));
-            await new Promise((resolve) => chrome.runtime.sendMessage({ action: 'saveBlockedUrl', url: lastBlockedUrl, patterns }, resolve));
+            await new Promise((resolve) => chrome.runtime.sendMessage({ action: 'saveBlockedUrl', url: lastBlockedUrl, patterns, reason }, resolve));
           }
   
           chrome.tabs.update({ url: lastBlockedUrl }, () => {
@@ -245,11 +238,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       document.querySelector('.default-buttons').style.display = 'none';
       if (!enableReasonInput) {
-        await submitReason(true, '');
+        await submitReason(true);
       } else {
         document.querySelector('.reason-input').style.display = 'block';
       }
     }
+  }
+
+  function showSaveReasonInput () {
+    document.querySelector('.save-message').style.display = 'none';
+    document.querySelector('.save-reason-input').style.display = 'block';
   }
 
   async function showConfirmMessage() {
@@ -257,7 +255,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       enableTimeInput ? await handleUnblockTime() : await unblockSite(duration, enableTempUnblocking);
     } else {
       let confirmText = "Are you sure you want to unblock this site";
-      let reason = document.getElementById('reason').value.trim();
       confirmText += reason === "" ? "?" : ` for the following reason: "${reason}"?`;
       let unblockTime = getUnblockingDuration();
       document.getElementById("unblockTime").innerHTML = `You will be unblocking it for${unblockTime}.`
@@ -297,15 +294,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  async function submitReason(nextStep, reason) {
-    reason = reason || document.getElementById('reason').value.trim();
+  async function submitReason(nextStep, comingFromDefaultButtons) {
+    reason = document.getElementById('reason').value.trim();
     nextStep = nextStep || false;
-    if (reason !== '')
-      chrome.storage.local.set({ reason });
-    nextStep ? await showTimeInput(true) : showAskToSave();
+    nextStep ? await showTimeInput(true) : showAskToSave(comingFromDefaultButtons);
   }
 
-  function showAskToSave() {
+  function showAskToSave(comingFromDefaultButtons) {
     switch(saveBlockedUrls) {
       case 'always':
         saveUrl();
@@ -319,6 +314,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelector('.time-input').style.display = 'none';
         document.querySelector('.confirm-message').style.display = 'none';
         document.querySelector('.save-message').style.display = 'block';
+        if(comingFromDefaultButtons) {
+          document.getElementById('fromDefaultButtons').style.display = 'inline';
+          document.getElementById('fromOtherButtons').style.display = 'none';
+        }
     }
   }
 
@@ -384,7 +383,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('focusButton').addEventListener('click', async () => {
     try {
-      await submitReason(false, '');
+      await submitReason(false, true);
     } catch (error) {
       console.error('Error in submitReason:', error);
     }
@@ -471,6 +470,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Error in showAskToSave:', error)
     }
   });
+  document.getElementById('confirmSaveButtonReason').addEventListener('click', async () => {
+    try {
+      showSaveReasonInput();
+    } catch (error) {
+      console.error('Error in saveUrl:', error);
+    }
+  });
+  document.getElementById('confirmSaveButtonNoReason').addEventListener('click', async () => {
+    try {
+      saveUrl();
+    } catch (error) {
+      console.error('Error in saveUrl:', error);
+    }
+  });
   document.getElementById('confirmSaveButton').addEventListener('click', async () => {
     try {
       saveUrl();
@@ -483,6 +496,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       closeTab();
     } catch (error) {
       console.error('Error in closeTab:', error)
+    }
+  });
+  document.getElementById('saveReasonButton').addEventListener('click', async () => {
+    try {
+      reason = document.getElementById('saveReason').value.trim();
+      saveUrl();
+    } catch (error) {
+      console.error('Error in saveUrl:', error)
+    }
+  });
+  document.getElementById('saveReason').addEventListener('keypress', async (event) => {
+    if (event.key === 'Enter') {
+      try {
+        reason = document.getElementById('saveReason').value.trim();
+        saveUrl();
+      } catch (error) {
+        console.error('Error submitting reason:', error);
+      }
     }
   });
 });

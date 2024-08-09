@@ -100,11 +100,10 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 });
 
-function saveBlockedUrl(url, patterns) {
+function saveBlockedUrl(url, patterns, reason) {
   const today = getLocalDate();
-  chrome.storage.local.get(['savedUrls', 'reason'], (data) => {
+  chrome.storage.local.get(['savedUrls'], (data) => {
     let savedUrls = data.savedUrls || {};
-    let reason = data.reason || '';
 
     // Remove entries older than 7 days
     const sevenDaysAgo = new Date();
