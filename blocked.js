@@ -455,17 +455,41 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Error in closeTab:', error)
     }
   });
-  document.getElementById('seeUrlsButton').addEventListener('click', () => {
+  document.getElementById('seeUrlsButton').addEventListener('click', async () => {
     try {
-      // Navigate to the options page with a parameter to indicate the Saved URLs tab should be opened
-      chrome.runtime.openOptionsPage(() => {
-        chrome.storage.sync.set({ openTab: 'SavedUrls' });
+      // Check if the options page is already open
+      chrome.tabs.query({}, (tabs) => {
+        const optionsUrl = chrome.runtime.getURL('options.html');
+        let optionsTab = null;
+  
+        for (const tab of tabs) {
+          if (tab.url === optionsUrl) {
+            optionsTab = tab;
+            break;
+          }
+        }
+  
+        if (optionsTab) {
+          // If the options page is already open, focus on it and update it to show Saved URLs
+          chrome.tabs.update(optionsTab.id, { active: true }, () => {
+            chrome.tabs.sendMessage(optionsTab.id, { action: 'openSavedUrls' });
+          });
+          // Close the current tab
+          chrome.tabs.getCurrent((tab) => {
+            chrome.tabs.remove(tab.id);
+          });
+        } else {
+          // If the options page is not open, open it in the current tab
+          chrome.tabs.update({ url: optionsUrl }, () => {
+            // Set the tab to open to the Saved URLs tab
+            chrome.storage.sync.set({ openTab: 'SavedUrls' });
+          });
+        }
       });
     } catch (error) {
       console.error('Error in seeUrlsButton:', error);
     }
   });
-  
   document.getElementById('closeButton').addEventListener('click', () => {
     try {
       closeTab();

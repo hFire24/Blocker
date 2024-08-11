@@ -46,6 +46,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === 'openSavedUrls') {
+      openTab('SavedUrls');
+      loadSavedUrls();
+    }
+  });
+
   const blockedList = document.getElementById('blockedSitesList');
   const addUrlInput = document.getElementById('addUrlInput');
   const addUrlButton = document.getElementById('addUrlButton');
