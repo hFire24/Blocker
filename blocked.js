@@ -167,16 +167,16 @@ document.addEventListener('DOMContentLoaded', async () => {
           });
   
           sendMessagePromise.then(() => {
-            saveText.innerHTML = "URL saved. See all saved URLs or close tab.";
+            saveText.innerHTML = "URL saved.";
           }).catch(() => {
-            saveText.innerHTML = "URL failed to save. See all saved URLs or close tab."
+            saveText.innerHTML = "URL failed to save."
           }).finally(() => {
             document.querySelector('.save-message').style.display = 'none';
             document.querySelector('.save-confirmation').style.display = 'block';
           });
         });
       } else {
-        saveText.innerHTML = "URL not found. See all saved URLs or close tab.";
+        saveText.innerHTML = "URL not found.";
         document.querySelector('.save-message').style.display = 'none';
         document.querySelector('.save-confirmation').style.display = 'block';
       }
@@ -302,12 +302,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         break;
       case 'reason':
         reason !== '' ? saveUrl() : closeTab();
+        break;
       default:
-        document.querySelector('.default-buttons').style.display = 'none';
-        document.querySelector('.confirm-message').style.display = 'none';
         document.querySelector('.save-message').style.display = 'block';
-        document.getElementById("reasonText").innerHTML = reason !== "" ? reason : "[none]";
+        let text = document.getElementById("url").innerHTML + " Reason: " + reason;
+        document.getElementById("url").innerHTML = text;
     }
+    document.querySelector('.default-buttons').style.display = 'none';
+    document.querySelector('.confirm-message').style.display = 'none';
   }
 
   const durationSelect = document.getElementById('unblockDuration');
