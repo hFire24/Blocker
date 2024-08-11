@@ -86,10 +86,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         let joinedMessages;
-        if (blockMessages.length > 1) {
+        if (blockMessages.length > 2) {
           const lastMessage = blockMessages.pop();
           joinedMessages = blockMessages.join(', ') + ', and ' + lastMessage;
-        } else {
+        } else if (blockMessages.length === 2) {
+          const lastMessage = blockMessages.pop();
+          joinedMessages = blockMessages.join('') + ' and ' + lastMessage;
+        }
+        else {
           joinedMessages = blockMessages.join('');
         }
 
@@ -102,7 +106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     chrome.storage.sync.get('lastBlockedUrl', (data) => {
       const lastBlockedUrl = data.lastBlockedUrl;
       if (lastBlockedUrl) {
-        document.getElementById("url").innerHTML = lastBlockedUrl;
+        document.getElementById("url").innerHTML = lastBlockedUrl.includes('&') ? lastBlockedUrl.slice(0, url.indexOf('&')) : lastBlockedUrl;
         chrome.storage.sync.get(null, (data) => {
           const enabled = data.enabled || [];
           const matchedPatterns = enabled.filter(pattern => new RegExp(pattern).test(lastBlockedUrl.toLowerCase()));
@@ -245,11 +249,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  function showSaveReasonInput () {
-    document.querySelector('.save-message').style.display = 'none';
-    document.querySelector('.save-reason-input').style.display = 'block';
-  }
-
   async function showConfirmMessage() {
     if (!enableConfirmMessage) {
       enableTimeInput ? await handleUnblockTime() : await unblockSite(duration, enableTempUnblocking);
@@ -294,13 +293,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  async function submitReason(nextStep, comingFromDefaultButtons) {
+  async function submitReason(nextStep) {
     reason = document.getElementById('reason').value.trim();
     nextStep = nextStep || false;
-    nextStep ? await showTimeInput(true) : showAskToSave(comingFromDefaultButtons);
+    nextStep ? await showTimeInput(true) : showAskToSave();
   }
 
-  function showAskToSave(comingFromDefaultButtons) {
+  function showAskToSave() {
     switch(saveBlockedUrls) {
       case 'always':
         saveUrl();
@@ -314,10 +313,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelector('.time-input').style.display = 'none';
         document.querySelector('.confirm-message').style.display = 'none';
         document.querySelector('.save-message').style.display = 'block';
-        if(comingFromDefaultButtons) {
-          document.getElementById('fromDefaultButtons').style.display = 'inline';
-          document.getElementById('fromOtherButtons').style.display = 'none';
-        }
     }
   }
 
@@ -383,7 +378,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('focusButton').addEventListener('click', async () => {
     try {
-      await submitReason(false, true);
+      saveBlockedUrls === 'always' ? saveUrl() : closeTab();
     } catch (error) {
       console.error('Error in submitReason:', error);
     }
@@ -470,20 +465,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Error in showAskToSave:', error)
     }
   });
-  document.getElementById('confirmSaveButtonReason').addEventListener('click', async () => {
-    try {
-      showSaveReasonInput();
-    } catch (error) {
-      console.error('Error in saveUrl:', error);
-    }
-  });
-  document.getElementById('confirmSaveButtonNoReason').addEventListener('click', async () => {
-    try {
-      saveUrl();
-    } catch (error) {
-      console.error('Error in saveUrl:', error);
-    }
-  });
   document.getElementById('confirmSaveButton').addEventListener('click', async () => {
     try {
       saveUrl();
@@ -496,24 +477,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       closeTab();
     } catch (error) {
       console.error('Error in closeTab:', error)
-    }
-  });
-  document.getElementById('saveReasonButton').addEventListener('click', async () => {
-    try {
-      reason = document.getElementById('saveReason').value.trim();
-      saveUrl();
-    } catch (error) {
-      console.error('Error in saveUrl:', error)
-    }
-  });
-  document.getElementById('saveReason').addEventListener('keypress', async (event) => {
-    if (event.key === 'Enter') {
-      try {
-        reason = document.getElementById('saveReason').value.trim();
-        saveUrl();
-      } catch (error) {
-        console.error('Error submitting reason:', error);
-      }
     }
   });
 });
