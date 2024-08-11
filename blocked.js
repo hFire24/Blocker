@@ -56,15 +56,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   let enableTimeInput = false;
   let enableTempUnblocking = false;
   let duration = 5;
+  let saveBlockedUrls = 'ask';
   let saveUnblockedUrls = true;
   let reason = '';
 
-  chrome.storage.sync.get(['enableConfirmMessage', 'enableReasonInput', 'enableTempUnblocking', 'unblockDuration', 'enableTimeInput', 'saveUnblockedUrls'], (data) => {
+  chrome.storage.sync.get(['enableConfirmMessage', 'enableReasonInput', 'enableTempUnblocking', 'unblockDuration', 'enableTimeInput',
+    'saveBlockedUrls', 'saveUnblockedUrls'], (data) => {
     enableConfirmMessage = data.enableConfirmMessage !== false;
     enableReasonInput = data.enableReasonInput !== false;
     enableTimeInput = data.enableTimeInput || false;
     enableTempUnblocking = data.enableTempUnblocking || false;
     duration = (!isNaN(data.unblockDuration) && data.unblockDuration > 0 && data.unblockDuration <= 1440) ? parseInt(data.unblockDuration, 10) : 5;
+    saveBlockedUrls = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : 'ask'; // default to ask if not set
     saveUnblockedUrls = data.saveUnblockedUrls !== false;
 
     const unblockEmoji = document.getElementById("unblockEmoji");
@@ -290,9 +293,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function showAskToSave() {
-    document.querySelector('.default-buttons').style.display = 'none';
-    document.querySelector('.confirm-message').style.display = 'none';
-    document.querySelector('.save-message').style.display = 'block';
+    switch(saveBlockedUrls) {
+      case 'always':
+        saveUrl();
+        break;
+      case 'never':
+        closeTab();
+        break;
+      case 'reason':
+        reason !== '' ? saveUrl() : closeTab();
+      default:
+        document.querySelector('.default-buttons').style.display = 'none';
+        document.querySelector('.confirm-message').style.display = 'none';
+        document.querySelector('.save-message').style.display = 'block';
+        document.getElementById("reasonText").innerHTML = reason !== "" ? reason : "[none]";
+    }
   }
 
   const durationSelect = document.getElementById('unblockDuration');
@@ -357,16 +372,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Error in unblock:', error);
     }
   });
-  document.getElementById('saveUrlButton').addEventListener('click', () => {
-    try {
-      showAskToSave();
-    } catch (error) {
-      console.error('Error in showAskToSave:', error);
-    }
-  });
   document.getElementById('focusButton').addEventListener('click', () => {
     try {
-      closeTab();
+      showAskToSave();
     } catch (error) {
       console.error('Error in closeTab:', error);
     }
