@@ -75,16 +75,20 @@
     .blocked-message .unblock-time-button:hover {
       background-color: #218838;
     }
-    .reason-input,
+    .reason-input {
+      margin-top: 20px;
+      color: #ccc;
+    }
+    .default-buttons,
     .confirm-message,
     .time-input,
     .save-message,
-    .save-reason-input {
+    .save-confirmation {
       display: none;
       margin-top: 20px;
       color: #ccc;
     }
-    .reason-input input, .save-reason-input input {
+    .reason-input input {
       padding: 10px;
       font-size: 1rem;
       width: 80%;
@@ -109,15 +113,16 @@
     <p>The website you are trying to visit is blocked.</p>
     <p id="blockCountMessage"></p>
     <p id="durationText"></p>
-    <div class="default-buttons">
-      <button id="unblockButton" class="unblock-button"><span id="unblockEmoji">🔓</span> <span id="unblockText">Unblock and Continue</span></button>
-      <button id="focusButton" class="focus-button">🔒 Remain Focused</button>
-    </div>
     <div class="reason-input">
-      <h2>Why are you unblocking this site?</h2>
+      <h2>Why did you decide to go to this site?</h2>
       <input type="text" id="reason" placeholder="Insert reason here">
       <button id="submitReasonButton" class="submit-reason-button">Submit</button>
-      <button id="cancelReasonButton" class="cancel-reason-button">Close</button>
+    </div>
+    <div class="default-buttons">
+      <h2>What do you want to do now?</h2>
+      <button id="unblockButton" class="unblock-button"><span id="unblockEmoji">🔓</span> Unblock Site</button>
+      <button id="saveUrlButton" class="confirm-unblock-button">💾 Save for Later</button>
+      <button id="focusButton" class="focus-button">🔒 Remain Focused</button>
     </div>
     <div class="time-input">
       <h2>How long should this website be unblocked for?</h2>
@@ -139,20 +144,25 @@
       <span id="customDurationColon" style="display:none">:</span>
       <input type="number" id="customDuration" min="1" max="1440" style="display:inline;">
       <button id="unblockTimeButton" class="unblock-time-button">Unblock and Continue</button>
-      <button id="cancelTimeButton" class="focus-button">Cancel</button>
+      <button id="backTimeButton" class="cancel-reason-button">Go Back</button>
     </div>
     <div class="confirm-message">
       <h2 id="confirmText"></h2>
       <p id="unblockTime"></p>
       <button id="confirmUnblockButton" class="confirm-unblock-button">🔓 Yes, Unblock</button>
-      <button id="backTimeButton" class="submit-reason-button" style="display:inline;">⏳ No, Adjust Time</button>
+      <button id="backConfirmButton" class="submit-reason-button" style="display:inline;">⏳ No, Adjust Time</button>
       <button id="cancelUnblockButton" class="focus-button">🔒 No, Remain Focused</button>
     </div>
     <div class="save-message">
-      <h2 id="saveText">Would you like to save this URL for later?</h2>
+      <h2>Would you like to save this URL for later?</h2>
       <p id="url"></p>
-      <button id="confirmSaveButton" class="confirm-unblock-button">💾 Yes</button>
+      <button id="confirmSaveButton" class="unblock-button">💾 Yes</button>
       <button id="cancelSaveButton" class="focus-button">🗑️ No</button>
+    </div>
+    <div class="save-confirmation">
+      <h2 id="saveText"></h2>
+      <button id="seeUrlsButton" class="confirm-unblock-button">View Saved URLs</button>
+      <button id="closeButton" class="focus-button">Close Tab</button>
     </div>
   </div>
   <script src="blocked.js"></script>

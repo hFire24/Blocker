@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   // Tabs
   const sitesTab = document.getElementById('sitesTab');
-  const blockingTab = document.getElementById('blockingTab');
+  const optionsTab = document.getElementById('optionsTab');
   const analyticsTab = document.getElementById('analyticsTab');
   const savedUrlsTab = document.getElementById('savedUrlsTab');
   const helpTab = document.getElementById('helpTab');
@@ -19,11 +19,32 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector(`[data-tab="${tabName}"]`).classList.add("active");
   }
 
+  // Event listeners for tabs
   sitesTab.addEventListener('click', () => openTab('Sites'));
-  blockingTab.addEventListener('click', () => openTab('Blocking'));
+  optionsTab.addEventListener('click', () => openTab('Options'));
   analyticsTab.addEventListener('click', () => openTab('Analytics'));
   savedUrlsTab.addEventListener('click', () => openTab('SavedUrls'));
   helpTab.addEventListener('click', () => window.open('help.html'));
+
+  // Check if a specific tab should be opened
+  chrome.storage.sync.get(['openTab'], (data) => {
+    if (data.openTab) {
+      openTab(data.openTab);
+      switch(data.openTab) {
+        case 'Analytics':
+          loadAnalytics();
+          break;
+        case 'SavedUrls':
+          loadSavedUrls();
+          break;
+      }
+      // Clear the openTab value
+      chrome.storage.sync.remove('openTab');
+    } else {
+      // Default to the Sites tab if no tab is specified
+      openTab('Sites');
+    }
+  });
 
   const blockedList = document.getElementById('blockedSitesList');
   const addUrlInput = document.getElementById('addUrlInput');
@@ -36,15 +57,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const tempUbOptions = document.getElementById('enableTempUbOptions');
   const tempUbPopup = document.getElementById('enableTempUbPopup');
   const ubDuration = document.getElementById('ubDuration');
-  const blockUrlSelect = document.getElementById('blockUrlSelect');
   const saveUnblocks = document.getElementById('saveUnblocks');
+  const notiReblock = document.getElementById('enableNotifications');
 
   let draggedItem = null;
 
   // Load blocked items from storage
   chrome.storage.sync.get(['blocked', 'enabled', 'favorites', 
   'enableConfirmMessage', 'enableReasonInput', 'enableTimeInput', 
-  'enableTempUnblocking', 'enableTempUbOptions', 'enableTempUbPopup', 'unblockDuration', 'saveBlockedUrls', 'saveUnblockedUrls'], (data) => {
+  'enableTempUnblocking', 'enableTempUbOptions', 'enableTempUbPopup', 'unblockDuration', 'saveUnblockedUrls', 'enableNotiReblock'], (data) => {
     const blocked = data.blocked || [];
     const enabled = data.enabled || [];
     const favorites = data.favorites || [];
@@ -61,8 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
     tempUbOptions.checked = data.enableTempUbOptions !== undefined ? data.enableTempUbOptions : false;
     tempUbPopup.checked = data.enableTempUbPopup !== undefined ? data.enableTempUbPopup : false;
     ubDuration.value = data.unblockDuration !== undefined ? data.unblockDuration : 60;
-    blockUrlSelect.value = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : "ask";
     saveUnblocks.checked = data.saveUnblockedUrls !== undefined ? data.saveUnblockedUrls : true;
+    notiReblock.checked = data.enableNotiReblock !== undefined ? data.enableNotiReblock : false;
 
     updateCheckboxState();
   });
@@ -95,8 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
   tempUbOptions.addEventListener('change', saveOptions);
   tempUbPopup.addEventListener('change', saveOptions);
   ubDuration.addEventListener('change', saveOptions);
-  blockUrlSelect.addEventListener('change', saveOptions);
   saveUnblocks.addEventListener('change', saveOptions);
+  notiReblock.addEventListener('change',saveOptions);
 
   function toggleTempUnblocking() {
     if (!tempUnblocking.checked) {
@@ -132,10 +153,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const enableTempUbOptions = tempUbOptions.disabled ? false : tempUbOptions.checked;
     const enableTempUbPopup = tempUbPopup.disabled ? false : tempUbPopup.checked;
     const unblockDuration = ubDuration.value;
-    const saveBlockedUrls = blockUrlSelect.value;
     const saveUnblockedUrls = saveUnblocks.checked;
+    const enableNotiReblock = notiReblock.checked;
     chrome.storage.sync.set({ enableConfirmMessage, enableReasonInput, enableTimeInput,
-      enableTempUnblocking, enableTempUbOptions, enableTempUbPopup, unblockDuration, saveBlockedUrls, saveUnblockedUrls });
+      enableTempUnblocking, enableTempUbOptions, enableTempUbPopup, unblockDuration, saveUnblockedUrls, enableNotiReblock });
   }
 
   addUrlButton.addEventListener('click', () => {

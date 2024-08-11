@@ -183,9 +183,10 @@ chrome.alarms.onAlarm.addListener((alarm) => {
       const { url, item } = data[alarm.name] || {};
 
       if (url && item) {
-        chrome.storage.sync.get(['blocked', 'enabled'], (data) => {
+        chrome.storage.sync.get(['blocked', 'enabled', 'enableNotiReblock'], (data) => {
           const currentBlocked = data.blocked || [];
           const currentEnabled = data.enabled || [];
+          const notification = data.enableNotiReblock || false;
 
           // Check if the item is still in the blocked array
           const stillBlocked = currentBlocked.some(blockedItem => {
@@ -208,7 +209,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
             const alarmTime = alarm.scheduledTime;
             const bufferTime = 5000; // 5 seconds buffer
 
-            if (now <= alarmTime + bufferTime) {
+            if (now <= alarmTime + bufferTime && notification) {
               // Show notification
               chrome.notifications.create({
                 type: 'basic',
