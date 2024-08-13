@@ -625,10 +625,10 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.local.get(['savedUrls'], (data) => {
       let savedUrls = data.savedUrls || {};
 
-      // Remove entries older than 7 days
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      const cutoffDate = sevenDaysAgo.toISOString().split('T')[0];
+      // Remove entries older than 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const cutoffDate = thirtyDaysAgo.toISOString().split('T')[0];
 
       savedUrls = Object.fromEntries(
         Object.entries(savedUrls).filter(([date]) => date >= cutoffDate)
