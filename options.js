@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const optionsTab = document.getElementById('optionsTab');
   const analyticsTab = document.getElementById('analyticsTab');
   const savedUrlsTab = document.getElementById('savedUrlsTab');
+  const exportTab = document.getElementById('exportTab');
   const helpTab = document.getElementById('helpTab');
 
   function openTab(tabName) {
@@ -24,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
   optionsTab.addEventListener('click', () => openTab('Options'));
   analyticsTab.addEventListener('click', () => openTab('Analytics'));
   savedUrlsTab.addEventListener('click', () => openTab('SavedUrls'));
+  exportTab.addEventListener('click', () => openTab('Export'))
   helpTab.addEventListener('click', () => window.open('help.html'));
 
   // Check if a specific tab should be opened
@@ -86,10 +88,10 @@ document.addEventListener('DOMContentLoaded', () => {
     confirmMessage.checked = data.enableConfirmMessage !== undefined ? data.enableConfirmMessage : true;
     reasonInput.checked = data.enableReasonInput !== undefined ? data.enableReasonInput : true;
     timeInput.checked = data.enableTimeInput !== undefined ? data.enableTimeInput : false;
-    tempUnblocking.checked = data.enableTempUnblocking !== undefined ? data.enableTempUnblocking : false;
+    tempUnblocking.checked = data.enableTempUnblocking !== undefined ? data.enableTempUnblocking : true;
     tempUbOptions.checked = data.enableTempUbOptions !== undefined ? data.enableTempUbOptions : false;
     tempUbPopup.checked = data.enableTempUbPopup !== undefined ? data.enableTempUbPopup : false;
-    ubDuration.value = data.unblockDuration !== undefined ? data.unblockDuration : 60;
+    ubDuration.value = data.unblockDuration !== undefined ? data.unblockDuration : 15;
     blockUrlSelect.value = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : "reason";
     saveUnblocks.checked = data.saveUnblockedUrls !== undefined ? data.saveUnblockedUrls : true;
     notiReblock.checked = data.enableNotiReblock !== undefined ? data.enableNotiReblock : false;
@@ -206,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function addBlockedPattern(pattern, type) {
     if (isPatternTooBroad(pattern)) {
-      alert("This pattern is too broad and may block unintended URLs. Please make it more specific.");
+      alert(`Keyword is too broad.\nTo block the whole word: \\b${pattern}\\b\nTo block just the start: \\b${pattern}\nTo block just the end: ${pattern}\\b`);
       return;
     }
     pattern = formatPattern(pattern, type);
@@ -710,4 +712,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load saved URLs when the Saved URLs tab is opened
   savedUrlsTab.addEventListener('click', loadSavedUrls);
+
+  document.getElementById('exportButton').addEventListener('click', exportData);
+  document.getElementById('importButton').addEventListener('click', () => {
+    document.getElementById('importFile').click();
+  });
+  document.getElementById('importFile').addEventListener('change', importData);
+
+  function exportData() {
+    chrome.storage.sync.get(null, (syncData) => {
+      chrome.storage.local.get(null, (localData) => {
+        const data = {
+          sync: syncData,
+          local: localData
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'websiteBlockerUserData.json';
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+    });
+  }
+
+  function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = JSON.parse(e.target.result);
+      if (data.sync) {
+        chrome.storage.sync.set(data.sync, () => {
+          console.log('Sync data imported');
+        });
+      }
+      if (data.local) {
+        chrome.storage.local.set(data.local, () => {
+          console.log('Local data imported');
+        });
+      }
+    };
+    reader.readAsText(file);
+  }
 });

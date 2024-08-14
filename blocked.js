@@ -54,8 +54,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   let enableConfirmMessage = true;
   let enableReasonInput = true;
   let enableTimeInput = false;
-  let enableTempUnblocking = false;
-  let duration = 5;
+  let enableTempUnblocking = true;
+  let duration = 15;
   let saveBlockedUrls = 'reason';
   let saveUnblockedUrls = true;
   let reason = '';
@@ -65,16 +65,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     enableConfirmMessage = data.enableConfirmMessage !== false;
     enableReasonInput = data.enableReasonInput !== false;
     enableTimeInput = data.enableTimeInput || false;
-    enableTempUnblocking = data.enableTempUnblocking || false;
-    duration = (!isNaN(data.unblockDuration) && data.unblockDuration > 0 && data.unblockDuration <= 1440) ? parseInt(data.unblockDuration, 10) : 5;
+    enableTempUnblocking = data.enableTempUnblocking !== false;
+    duration = (!isNaN(data.unblockDuration) && data.unblockDuration > 0 && data.unblockDuration <= 1440) ? parseInt(data.unblockDuration, 10) : 15;
     saveBlockedUrls = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : 'reason';
     saveUnblockedUrls = data.saveUnblockedUrls !== false;
 
     const unblockEmoji = document.getElementById("unblockEmoji");
     if (enableTimeInput) {
       unblockEmoji.innerText = "⏳";
-    } else if (enableConfirmMessage) {
-      unblockEmoji.innerText = "❓";
     } else {
       unblockEmoji.innerText = "🔓";
     }

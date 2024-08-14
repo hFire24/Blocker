@@ -37,6 +37,7 @@
     <button id="optionsTab" class="tablinks" data-tab="Options">Options</button>
     <button id="analyticsTab" class="tablinks" data-tab="Analytics">Analytics</button>
     <button id="savedUrlsTab" class="tablinks" data-tab="SavedUrls">Saved URLs</button>
+    <button id="exportTab" class="tablinks" data-tab="Export">Import/Export</button>
     <button id="helpTab" class="tablinks" data-tab="Help">Help</button>
   </div>
 
@@ -69,11 +70,11 @@
     </div>
     <div class="indented">
       <input type="checkbox" id="enableTempUbOptions">
-      <label for="enableTempUbOptions">Enable on Options page</label>
+      <label for="enableTempUbOptions">Enable on Options page (Does Nothing)</label>
     </div>
     <div class="indented">
       <input type="checkbox" id="enableTempUbPopup">
-      <label for="enableTempUbPopup">Enable on Popup</label>
+      <label for="enableTempUbPopup">Enable on Popup (Does Nothing)</label>
     </div>
     <div class="indented">
       <label for="ubDuration">Default Unblocking Duration (minutes): </label>
@@ -131,6 +132,12 @@
       </tbody>
     </table>
     <p>All saved URLs older than 30 days get permanently deleted.</p>
+  </div>
+
+  <div id="Export" class="tabcontent">
+    <h2>Import/Export</h2>
+    <button id="importButton" style="margin-bottom:1rem;">Import Data</button> <input type="file" id="importFile" style="display: none;" />
+    <button id="exportButton" style="margin-bottom:1rem;">Export Data</button>
   </div>
 
   <script src="options.js"></script>
