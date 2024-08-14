@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tempUbOptions.checked = data.enableTempUbOptions !== undefined ? data.enableTempUbOptions : false;
     tempUbPopup.checked = data.enableTempUbPopup !== undefined ? data.enableTempUbPopup : false;
     ubDuration.value = data.unblockDuration !== undefined ? data.unblockDuration : 60;
-    blockUrlSelect.value = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : "ask";
+    blockUrlSelect.value = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : "reason";
     saveUnblocks.checked = data.saveUnblockedUrls !== undefined ? data.saveUnblockedUrls : true;
     notiReblock.checked = data.enableNotiReblock !== undefined ? data.enableNotiReblock : false;
 

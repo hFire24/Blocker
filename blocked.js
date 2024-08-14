@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let enableTimeInput = false;
   let enableTempUnblocking = false;
   let duration = 5;
-  let saveBlockedUrls = 'ask';
+  let saveBlockedUrls = 'reason';
   let saveUnblockedUrls = true;
   let reason = '';
 
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     enableTimeInput = data.enableTimeInput || false;
     enableTempUnblocking = data.enableTempUnblocking || false;
     duration = (!isNaN(data.unblockDuration) && data.unblockDuration > 0 && data.unblockDuration <= 1440) ? parseInt(data.unblockDuration, 10) : 5;
-    saveBlockedUrls = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : 'ask'; // default to ask if not set
+    saveBlockedUrls = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : 'reason';
     saveUnblockedUrls = data.saveUnblockedUrls !== false;
 
     const unblockEmoji = document.getElementById("unblockEmoji");
@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     chrome.storage.sync.get('lastBlockedUrl', (data) => {
       const lastBlockedUrl = data.lastBlockedUrl;
       if (lastBlockedUrl) {
-        document.getElementById("url").innerHTML = lastBlockedUrl.includes('&') ? lastBlockedUrl.slice(0, lastBlockedUrl.indexOf('&')) : lastBlockedUrl;
+        //document.getElementById("url").innerHTML = lastBlockedUrl.includes('&') ? lastBlockedUrl.slice(0, lastBlockedUrl.indexOf('&')) : lastBlockedUrl;
         chrome.storage.sync.get(null, (data) => {
           const enabled = data.enabled || [];
           const matchedPatterns = enabled.filter(pattern => new RegExp(pattern).test(lastBlockedUrl.toLowerCase()));
@@ -150,35 +150,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const saveUrl = () => {
     chrome.storage.sync.get('lastBlockedUrl', (data) => {
       const lastBlockedUrl = data.lastBlockedUrl;
-      const saveText = document.getElementById("saveText");
       if (lastBlockedUrl) {
         chrome.storage.sync.get('enabled', (data) => {
           const patterns = data.enabled.filter(pattern => new RegExp(pattern).test(lastBlockedUrl.toLowerCase()));
-          
-          // Use a promise to ensure the message is sent before closing the tab
-          const sendMessagePromise = new Promise((resolve, reject) => {
-            chrome.runtime.sendMessage({ action: 'saveBlockedUrl', url: lastBlockedUrl, patterns, reason }, (response) => {
-              if (chrome.runtime.lastError) {
-                reject(chrome.runtime.lastError);
-              } else {
-                resolve(response);
-              }
-            });
-          });
-  
-          sendMessagePromise.then(() => {
-            saveText.innerHTML = "URL saved.";
-          }).catch(() => {
-            saveText.innerHTML = "URL failed to save."
-          }).finally(() => {
-            document.querySelector('.save-message').style.display = 'none';
-            document.querySelector('.save-confirmation').style.display = 'block';
-          });
+          chrome.runtime.sendMessage({ action: 'saveBlockedUrl', url: lastBlockedUrl, patterns, reason });
         });
-      } else {
-        saveText.innerHTML = "URL not found.";
-        document.querySelector('.save-message').style.display = 'none';
-        document.querySelector('.save-confirmation').style.display = 'block';
       }
     });
   };
@@ -288,28 +264,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function submitReason() {
     reason = document.getElementById('reason').value.trim();
+    if(saveBlockedUrls === 'always' || saveBlockedUrls == 'reason' && reason !== '')
+      saveUrl();
     document.querySelector('.reason-input').style.display = 'none';
     document.querySelector('.default-buttons').style.display = 'block';
-  }
-
-  function showAskToSave() {
-    switch(saveBlockedUrls) {
-      case 'always':
-        saveUrl();
-        break;
-      case 'never':
-        closeTab();
-        break;
-      case 'reason':
-        reason !== '' ? saveUrl() : closeTab();
-        break;
-      default:
-        document.querySelector('.save-message').style.display = 'block';
-        let text = document.getElementById("url").innerHTML + " Reason: " + reason;
-        document.getElementById("url").innerHTML = text;
-    }
-    document.querySelector('.default-buttons').style.display = 'none';
-    document.querySelector('.confirm-message').style.display = 'none';
   }
 
   const durationSelect = document.getElementById('unblockDuration');
@@ -376,9 +334,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('focusButton').addEventListener('click', () => {
     try {
-      showAskToSave();
+      closeTab();
     } catch (error) {
-      console.error('Error in closeTab:', error);
+      console.error('Error in focusButton:', error);
     }
   });
   document.getElementById('unblockDuration').addEventListener('change', (event) => {
@@ -446,28 +404,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('cancelUnblockButton').addEventListener('click', () => {
     try {
-      showAskToSave();
+      closeTab();
     } catch (error) {
       console.error('Error in showAskToSave:', error)
     }
   });
-  document.getElementById('confirmSaveButton').addEventListener('click', () => {
+  /*document.getElementById('seeUrlsButton').addEventListener('click', async () => {
     try {
-      saveUrl();
-    } catch (error) {
-      console.error('Error in saveUrl:', error);
-    }
-  });
-  document.getElementById('cancelSaveButton').addEventListener('click', () => {
-    try {
-      closeTab();
-    } catch (error) {
-      console.error('Error in closeTab:', error)
-    }
-  });
-  document.getElementById('seeUrlsButton').addEventListener('click', async () => {
-    try {
-      // Check if the options page is already open
       chrome.tabs.query({}, (tabs) => {
         const optionsUrl = chrome.runtime.getURL('options.html');
         let optionsTab = null;
@@ -480,18 +423,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
   
         if (optionsTab) {
-          // If the options page is already open, focus on it and update it to show Saved URLs
           chrome.tabs.update(optionsTab.id, { active: true }, () => {
             chrome.tabs.sendMessage(optionsTab.id, { action: 'openSavedUrls' });
           });
-          // Close the current tab
           chrome.tabs.getCurrent((tab) => {
             chrome.tabs.remove(tab.id);
           });
         } else {
-          // If the options page is not open, open it in the current tab
           chrome.tabs.update({ url: optionsUrl }, () => {
-            // Set the tab to open to the Saved URLs tab
             chrome.storage.sync.set({ openTab: 'SavedUrls' });
           });
         }
@@ -499,12 +438,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
       console.error('Error in seeUrlsButton:', error);
     }
-  });
-  document.getElementById('closeButton').addEventListener('click', () => {
-    try {
-      closeTab();
-    } catch (error) {
-      console.error('Error in closeTab:', error)
-    }
-  });
+  });*/
 });
