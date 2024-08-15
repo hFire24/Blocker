@@ -57,18 +57,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   let enableTempUnblocking = true;
   let duration = 15;
   let saveBlockedUrls = 'reason';
-  let saveUnblockedUrls = true;
   let reason = '';
 
-  chrome.storage.sync.get(['enableConfirmMessage', 'enableReasonInput', 'enableTempUnblocking', 'unblockDuration', 'enableTimeInput',
-    'saveBlockedUrls', 'saveUnblockedUrls'], (data) => {
+  chrome.storage.sync.get(['enableConfirmMessage', 'enableReasonInput', 'enableTempUnblocking', 'unblockDuration', 'enableTimeInput', 'saveBlockedUrls'], (data) => {
     enableConfirmMessage = data.enableConfirmMessage !== false;
     enableReasonInput = data.enableReasonInput !== false;
     enableTimeInput = data.enableTimeInput || false;
     enableTempUnblocking = data.enableTempUnblocking !== false;
     duration = (!isNaN(data.unblockDuration) && data.unblockDuration > 0 && data.unblockDuration <= 1440) ? parseInt(data.unblockDuration, 10) : 15;
     saveBlockedUrls = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : 'reason';
-    saveUnblockedUrls = data.saveUnblockedUrls !== false;
 
     const unblockEmoji = document.getElementById("unblockEmoji");
     if (enableTimeInput) {
@@ -197,13 +194,6 @@ document.addEventListener('DOMContentLoaded', async () => {
               duration: duration,
               itemsToReblock: toUnblock
             });
-          }
-
-          reason += '*';
-  
-          if (saveUnblockedUrls) {
-            const patterns = enabled.filter(pattern => new RegExp(pattern).test(lastBlockedUrl.toLowerCase()));
-            await new Promise((resolve) => chrome.runtime.sendMessage({ action: 'saveBlockedUrl', url: lastBlockedUrl, patterns, reason }, resolve));
           }
   
           chrome.tabs.update({ url: lastBlockedUrl }, () => {
