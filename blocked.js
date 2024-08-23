@@ -81,18 +81,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   setTimeout(() => {
-    chrome.storage.sync.get(['blockCount'], (data) => {
+    chrome.storage.sync.get(['blockCount', 'enabled'], (data) => {
       const blockCount = data.blockCount;
+      const enabledSites = data.enabled || [];
       const blockCountMessage = document.getElementById('blockCountMessage');
       blockCountMessage.innerHTML = '';
+    
       if (blockCount) {
         const blockEntries = Object.entries(blockCount);
-        const blockMessages = blockEntries.map(([pattern, count]) => {
-          const displayText = getDisplayText(pattern);
-          const times = (count === 1) ? 'time' : 'times';
-          return `<b>${displayText}</b> ${count} ${times}`;
-        });
-
+    
+        // Display only the enabled sites that are currently blocked
+        const blockMessages = blockEntries
+          .filter(([pattern]) => enabledSites.includes(pattern))
+          .map(([pattern, count]) => {
+            const displayText = getDisplayText(pattern);
+            const times = (count === 1) ? 'time' : 'times';
+            return `<b>${displayText}</b> ${count} ${times}`;
+          });
+    
         let joinedMessages;
         if (blockMessages.length > 2) {
           const lastMessage = blockMessages.pop();
@@ -100,17 +106,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (blockMessages.length === 2) {
           const lastMessage = blockMessages.pop();
           joinedMessages = blockMessages.join('') + ' and ' + lastMessage;
-        }
-        else {
+        } else {
           joinedMessages = blockMessages.join('');
         }
-
+    
         const p = document.createElement('p');
         p.innerHTML = `Website Blocker has blocked ${joinedMessages} today.`;
         blockCountMessage.appendChild(p);
       }
     });
-
+    
     chrome.storage.sync.get('lastBlockedUrl', (data) => {
       const lastBlockedUrl = data.lastBlockedUrl;
       if (lastBlockedUrl) {
