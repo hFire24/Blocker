@@ -118,7 +118,7 @@ function saveBlockedUrl(url, patterns, reason) {
       savedUrls[today] = [];
     }
 
-    if (url.includes('&') && (url.includes('google') || url.includes('youtube')))
+    if (url.includes('&') && url.includes('google'))
       url = url.slice(0, url.indexOf('&'));
 
     let urlEntry = savedUrls[today].find(entry => entry.url === url);
