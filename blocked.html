@@ -81,8 +81,7 @@
     .default-buttons,
     .confirm-message,
     .time-input,
-    .save-message,
-    .save-confirmation {
+    .message-buttons {
       display: none;
       margin-top: 20px;
       color: #ccc;
@@ -107,7 +106,7 @@
 </head>
 <body>
   <div class="blocked-message">
-    <h1>Website Blocked</h1>
+    <h1 id="message">Website Blocked</h1>
     <p>The website you are trying to visit is blocked.</p>
     <p id="blockCountMessage"></p>
     <p id="durationText"></p>
@@ -149,6 +148,10 @@
       <button id="confirmUnblockButton" class="confirm-unblock-button">🔓 Yes, Unblock</button>
       <button id="backConfirmButton" class="submit-reason-button" style="display:inline;">⏳ No, Adjust Time</button>
       <button id="cancelUnblockButton" class="focus-button">🔒 No, Remain Focused</button>
+    </div>
+    <div class="message-buttons">
+      <button id="editMessageButton" class="submit-reason-button" style="display:inline;">📝 Edit Message</button>
+      <button id="closeButton" class="focus-button">🔒 Close Tab</button>
     </div>
   </div>
   <script src="blocked.js"></script>

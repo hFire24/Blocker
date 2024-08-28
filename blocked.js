@@ -303,10 +303,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function remainFocused() {
-    chrome.storage.sync.get(['focusOption', 'redirectUrl'], (data) => {
+    chrome.storage.sync.get(['focusOption', 'redirectUrl', 'message'], (data) => {
       switch(data.focusOption) {
         case ("redirect"):
           window.location.href = data.redirectUrl;
+          break;
+        case ("message"):
+          document.querySelector(".default-buttons").style.display = "none";
+          document.querySelector(".confirm-message").style.display = "none";
+          document.querySelector(".message-buttons").style.display = "block";
+          document.querySelector("p").innerHTML = "";
+          document.getElementById("blockCountMessage").innerHTML = "";
+          document.getElementById("durationText").innerHTML = "";
+          document.getElementById("message").innerHTML = data.message !== undefined ? data.message : "You can do it! Stay focused!";
           break;
         default:
           closeTab();
@@ -412,6 +421,27 @@ document.addEventListener('DOMContentLoaded', async () => {
       remainFocused();
     } catch (error) {
       console.error('Error in showAskToSave:', error)
+    }
+  });
+  document.getElementById('editMessageButton').addEventListener('click', () => {
+    try {
+      let message = prompt("What would you like the message to say?");
+      if(message !== undefined) {
+        message = message.trim();
+        if(message !== "") {
+          chrome.storage.sync.set({message});
+          document.getElementById("message").innerHTML = message;
+        }
+      }
+    } catch (error) {
+      console.error('Error in editMessageButton:', error);
+    }
+  });
+  document.getElementById('closeButton').addEventListener('click', () => {
+    try {
+      closeTab();
+    } catch (error) {
+      console.error('Error in closeButton:', error)
     }
   });
   /*document.getElementById('seeUrlsButton').addEventListener('click', async () => {

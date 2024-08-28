@@ -69,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const blockUrlSelect = document.getElementById('blockUrlSelect');
   const focusSelect = document.getElementById('focusSelect');
   const redirectField = document.getElementById('redirectPage');
+  const messageField = document.getElementById('message');
   const notiReblock = document.getElementById('enableNotifications');
 
   let draggedItem = null;
@@ -77,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
   chrome.storage.sync.get(['blocked', 'enabled', 'favorites', 
   'enableConfirmMessage', 'enableReasonInput', 'enableTimeInput', 
   'enableTempUnblocking', 'enableTempUbOptions', 'enableTempUbPopup', 'unblockDuration', 'saveBlockedUrls',
-  'focusOption', 'redirectUrl', 'enableNotiReblock'], (data) => {
+  'focusOption', 'redirectUrl', 'message', 'enableNotiReblock'], (data) => {
     const blocked = data.blocked || [];
     const enabled = data.enabled || [];
     const favorites = data.favorites || [];
@@ -97,6 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
     blockUrlSelect.value = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : "reason";
     focusSelect.value = data.focusOption !== undefined ? data.focusOption : "close";
     redirectField.value = data.redirectUrl !== undefined ? data.redirectUrl : "";
+    messageField.value = data.message !== undefined ? data.message : "You can do it! Stay focused!";
     notiReblock.checked = data.enableNotiReblock !== undefined ? data.enableNotiReblock : false;
 
     updateCheckboxState();
@@ -133,7 +135,8 @@ document.addEventListener('DOMContentLoaded', () => {
   ubDuration.addEventListener('change', saveOptions);
   blockUrlSelect.addEventListener('change', saveOptions);
   focusSelect.addEventListener('change', toggleFocusField);
-  document.getElementById("saveUrl").addEventListener('click', saveOptions)
+  document.getElementById("saveUrl").addEventListener('click', saveOptions);
+  document.getElementById("saveMessage").addEventListener('click', saveOptions);
   notiReblock.addEventListener('change',saveOptions);
 
   function toggleTempUnblocking() {
@@ -164,9 +167,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function toggleFocusField() {
     document.getElementById("redirectOptions").style.display = "none";
+    document.getElementById("messageOptions").style.display = "none";
     switch(focusSelect.value) {
       case "redirect":
         document.getElementById("redirectOptions").style.display = "inline";
+        break;
+      case "message":
+        document.getElementById("messageOptions").style.display = "inline";
         break;
     }
     saveOptions();
@@ -183,10 +190,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveBlockedUrls = blockUrlSelect.value;
     const focusOption = focusSelect.value;
     const redirectUrl = redirectField.value;
+    const message = messageField.value;
     const enableNotiReblock = notiReblock.checked;
     chrome.storage.sync.set({ enableConfirmMessage, enableReasonInput, enableTimeInput,
       enableTempUnblocking, enableTempUbOptions, enableTempUbPopup, unblockDuration, saveBlockedUrls,
-      focusOption, redirectUrl, enableNotiReblock });
+      focusOption, redirectUrl, message, enableNotiReblock });
   }
 
   addUrlButton.addEventListener('click', () => {
