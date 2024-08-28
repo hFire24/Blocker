@@ -302,6 +302,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  function remainFocused() {
+    chrome.storage.sync.get(['focusOption', 'redirectUrl'], (data) => {
+      switch(data.focusOption) {
+        case ("redirect"):
+          window.location.href = data.redirectUrl;
+          break;
+        default:
+          closeTab();
+      }
+    });
+  }
+
   document.getElementById('submitReasonButton').addEventListener('click', () => {
     try {
       submitReason();
@@ -327,7 +339,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('focusButton').addEventListener('click', () => {
     try {
-      closeTab();
+      remainFocused();
     } catch (error) {
       console.error('Error in focusButton:', error);
     }
@@ -397,7 +409,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('cancelUnblockButton').addEventListener('click', () => {
     try {
-      closeTab();
+      remainFocused();
     } catch (error) {
       console.error('Error in showAskToSave:', error)
     }

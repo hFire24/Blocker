@@ -89,6 +89,16 @@
       </select>
     </div>
     <div>
+      <label for="focusSelect">When "Remain Focused" is pressed </label>
+      <select id="focusSelect">
+        <option value="close">Close Tab</option>
+        <option value="redirect">Redirect to Page</option>
+      </select>
+      <span id="redirectOptions" style="display:none;">
+        <input type="text" id="redirectPage" placeholder="insert URL here" size="50"> <button id="saveUrl">Save</button>
+      </span>
+    </div>
+    <div>
       <input type="checkbox" id="enableNotifications">
       <label for="enableNotifications">Enable Reblocking Notifications</label>
     </div>
