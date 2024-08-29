@@ -59,13 +59,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   let saveBlockedUrls = 'reason';
   let reason = '';
 
-  chrome.storage.sync.get(['enableConfirmMessage', 'enableReasonInput', 'enableTempUnblocking', 'unblockDuration', 'enableTimeInput', 'saveBlockedUrls'], (data) => {
+  chrome.storage.sync.get(['blockedPageBgColor', 'enableConfirmMessage', 'enableReasonInput', 'enableTempUnblocking', 'unblockDuration', 'enableTimeInput', 'saveBlockedUrls'], (data) => {
     enableConfirmMessage = data.enableConfirmMessage !== false;
     enableReasonInput = data.enableReasonInput !== false;
     enableTimeInput = data.enableTimeInput || false;
     enableTempUnblocking = data.enableTempUnblocking !== false;
     duration = (!isNaN(data.unblockDuration) && data.unblockDuration > 0 && data.unblockDuration <= 1440) ? parseInt(data.unblockDuration, 10) : 15;
     saveBlockedUrls = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : 'reason';
+    document.body.style.backgroundColor = data.blockedPageBgColor !== undefined ? data.blockedPageBgColor : '#1E3A5F';
 
     const unblockEmoji = document.getElementById("unblockEmoji");
     if (enableTimeInput) {

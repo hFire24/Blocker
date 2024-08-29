@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const addUrlInput = document.getElementById('addUrlInput');
   const addUrlButton = document.getElementById('addUrlButton');
 
+  const backgroundColorSelect = document.getElementById('backgroundColorSelect');
   const confirmMessage = document.getElementById('enableConfirmMessage');
   const reasonInput = document.getElementById('enableReasonInput');
   const timeInput = document.getElementById('enableTimeInput');
@@ -76,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load blocked items from storage
   chrome.storage.sync.get(['blocked', 'enabled', 'favorites', 
-  'enableConfirmMessage', 'enableReasonInput', 'enableTimeInput', 
+  'blockedPageBgColor', 'enableConfirmMessage', 'enableReasonInput', 'enableTimeInput', 
   'enableTempUnblocking', 'enableTempUbOptions', 'enableTempUbPopup', 'unblockDuration', 'saveBlockedUrls',
   'focusOption', 'redirectUrl', 'message', 'enableNotiReblock'], (data) => {
     const blocked = data.blocked || [];
@@ -88,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Set blocking options
+    backgroundColorSelect.value = data.blockedPageBgColor !== undefined ? data.blockedPageBgColor : "#1E3A5F";
     confirmMessage.checked = data.enableConfirmMessage !== undefined ? data.enableConfirmMessage : true;
     reasonInput.checked = data.enableReasonInput !== undefined ? data.enableReasonInput : true;
     timeInput.checked = data.enableTimeInput !== undefined ? data.enableTimeInput : false;
@@ -126,6 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Event listeners for blocking options
+  backgroundColorSelect.addEventListener('change', saveOptions);
   confirmMessage.addEventListener('change', saveOptions);
   reasonInput.addEventListener('change', saveOptions);
   timeInput.addEventListener('change', saveOptions);
@@ -180,6 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function saveOptions() {
+    const blockedPageBgColor = backgroundColorSelect.value;
     const enableConfirmMessage = confirmMessage.checked;
     const enableReasonInput = reasonInput.checked;
     const enableTimeInput = timeInput.checked;
@@ -192,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const redirectUrl = redirectField.value;
     const message = messageField.value;
     const enableNotiReblock = notiReblock.checked;
-    chrome.storage.sync.set({ enableConfirmMessage, enableReasonInput, enableTimeInput,
+    chrome.storage.sync.set({ blockedPageBgColor, enableConfirmMessage, enableReasonInput, enableTimeInput,
       enableTempUnblocking, enableTempUbOptions, enableTempUbPopup, unblockDuration, saveBlockedUrls,
       focusOption, redirectUrl, message, enableNotiReblock });
   }
