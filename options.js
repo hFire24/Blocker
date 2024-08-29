@@ -140,6 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
   focusSelect.addEventListener('change', toggleFocusField);
   document.getElementById("saveUrl").addEventListener('click', saveOptions);
   document.getElementById("saveMessage").addEventListener('click', saveOptions);
+  document.getElementById("resetMessage").addEventListener('click', resetMessage);
   notiReblock.addEventListener('change',saveOptions);
 
   function toggleTempUnblocking() {
@@ -180,6 +181,12 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
     }
     saveOptions();
+  }
+
+  function resetMessage() {
+    const resetMessage = "You can do it! Stay focused!"
+    chrome.storage.sync.set({ message: resetMessage });
+    messageField.value = resetMessage;
   }
 
   function saveOptions() {
