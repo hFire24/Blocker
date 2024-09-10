@@ -216,18 +216,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!enableConfirmMessage) {
       enableTimeInput ? await handleUnblockTime() : await unblockSite(duration, enableTempUnblocking);
     } else {
-      let confirmText = "Are you sure you want to unblock this site";
-      confirmText += reason === "" ? "?" : ` for the following reason: "${reason}"?`;
-      let unblockTime = getUnblockingDuration();
-      document.getElementById("unblockTime").innerHTML = `You will be unblocking it for${unblockTime}.`
+      let confirmText = "Are you being distracted?";
 
       document.getElementById('confirmText').innerText = confirmText;
       document.querySelector('.time-input').style.display = 'none';
       document.querySelector('.default-buttons').style.display = 'none';
       document.querySelector('.confirm-message').style.display = 'block';
-      if (!enableTimeInput) {
-        document.getElementById('backConfirmButton').style.display = 'none';
-      }
     }
   }
 
@@ -408,13 +402,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       await handleUnblockTime();
     } catch (error) {
       console.error('Error in handleUnblockTime:', error);
-    }
-  });
-  document.getElementById('backConfirmButton').addEventListener('click', async () => {
-    try {
-      await showTimeInput(false);
-    } catch (error) {
-      console.error('Error in showTimeInput:', error);
     }
   });
   document.getElementById('cancelUnblockButton').addEventListener('click', () => {
