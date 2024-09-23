@@ -52,19 +52,24 @@ function setChromeStorage(data) {
 
 document.addEventListener('DOMContentLoaded', async () => {
   let enableConfirmMessage = true;
-  let enableReasonInput = true;
+  let enableReasonInput = false;
+  let enableUbButtonDisabling = false;
+  let disableDuration = 15;
   let enableTimeInput = false;
   let enableTempUnblocking = true;
-  let duration = 15;
+  let duration = 5;
   let saveBlockedUrls = 'reason';
   let reason = '';
 
-  chrome.storage.sync.get(['blockedPageBgColor', 'enableConfirmMessage', 'enableReasonInput', 'enableTempUnblocking', 'unblockDuration', 'enableTimeInput', 'saveBlockedUrls'], (data) => {
+  chrome.storage.sync.get(['blockedPageBgColor', 'enableConfirmMessage', 'enableReasonInput', 'enableUbButtonDisabling', 'ubDisableDuration',
+    'enableTempUnblocking', 'unblockDuration', 'enableTimeInput', 'saveBlockedUrls'], (data) => {
     enableConfirmMessage = data.enableConfirmMessage !== false;
-    enableReasonInput = data.enableReasonInput !== false;
+    enableReasonInput = data.enableReasonInput || false;
+    enableUbButtonDisabling = data.enableUbButtonDisabling || false;
+    disableDuration = (!isNaN(data.ubDisableDuration) && data.ubDisableDuration > 0 && data.ubDisableDuration <= 300) ? parseInt(data.ubDisableDuration, 10) : 15;
     enableTimeInput = data.enableTimeInput || false;
     enableTempUnblocking = data.enableTempUnblocking !== false;
-    duration = (!isNaN(data.unblockDuration) && data.unblockDuration > 0 && data.unblockDuration <= 1440) ? parseInt(data.unblockDuration, 10) : 15;
+    duration = (!isNaN(data.unblockDuration) && data.unblockDuration > 0 && data.unblockDuration <= 1440) ? parseInt(data.unblockDuration, 10) : 5;
     saveBlockedUrls = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : 'reason';
     document.body.style.backgroundColor = data.blockedPageBgColor !== undefined ? data.blockedPageBgColor : '#1E3A5F';
 
@@ -250,6 +255,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  function showReasonInput() {
+    document.querySelector('.default-buttons').style.display = 'none';
+    document.querySelector('.reason-input').style.display = 'block';
+  }
+
   function submitReason() {
     reason = document.getElementById('reason').value.trim();
     if(saveBlockedUrls === 'always' || saveBlockedUrls == 'reason' && reason !== '')
@@ -339,6 +349,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       await showTimeInput(true);
     } catch (error) {
       console.error('Error in unblock:', error);
+    }
+  });
+  document.getElementById('reasonButton').addEventListener('click', () => {
+    try {
+      showReasonInput(true);
+    } catch (error) {
+      console.error('Error in reasonButton:', error);
     }
   });
   document.getElementById('focusButton').addEventListener('click', () => {
