@@ -84,6 +84,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.querySelector('.default-buttons').style.display = 'block';
       document.querySelector('.reason-input').style.display = 'none';
     }
+
+    if (enableUbButtonDisabling) {
+      // Disable the button and start the timer
+      unblockButton.disabled = true;
+      setTimeout(() => {
+        unblockButton.disabled = false;
+      }, disableDuration * 1000); // Disable for `disableDuration` seconds
+    }
   });
 
   setTimeout(() => {
