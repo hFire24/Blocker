@@ -11,10 +11,10 @@
     .tab button:hover { background-color: #ddd; }
     .tab button.active { background-color: #ccc; }
     .tabcontent { display: none; padding: 6px 12px; border: 1px solid #ccc; border-top: none; }
-    #blockedSitesList { list-style-type: none; padding: 0; }
-    #blockedSitesList li, #Options div { margin-bottom: 10px; }
+    #blockedSitesList, #productiveSitesList { list-style-type: none; padding: 0; }
+    #blockedSitesList li, #productiveSitesList li, #Options div { margin-bottom: 10px; }
     .input-container { margin-top: 20px; display: flex; align-items: center; }
-    #blockedSitesList button { margin-left: 10px; }
+    #blockedSitesList button, #productiveSitesList button, #productiveSitesList .name { margin-left: 10px; }
     .disabled { text-decoration: line-through; }
     input[type="checkbox"] { margin-right: 10px; }
     select { margin-left: 10px; }
@@ -37,6 +37,7 @@
     <button id="optionsTab" class="tablinks" data-tab="Options">Options</button>
     <button id="analyticsTab" class="tablinks" data-tab="Analytics">Analytics</button>
     <button id="savedUrlsTab" class="tablinks" data-tab="SavedUrls">Saved URLs</button>
+    <button id="productiveUrlsTab" class="tablinks" data-tab="ProductiveUrls">Productive URLs</button>
     <button id="exportTab" class="tablinks" data-tab="Export">Import/Export</button>
     <button id="helpTab" class="tablinks" data-tab="Help">Help</button>
   </div>
@@ -158,6 +159,28 @@
       </tbody>
     </table>
     <p>All saved URLs older than 30 days get permanently deleted.</p>
+  </div>
+
+  <div id="ProductiveUrls" class="tabcontent">
+    <h2>Productive URLs</h2>
+    <div>
+      <input type="checkbox" id="enableRandomOrder">
+      <label for="enableRandomOrder">Enable URLs to be displayed randomly</label>
+    </div>
+    <div class="input-container">
+      <input type="text" id="addProductiveInput" placeholder="Enter URL">
+      <button id="addProductiveButton">Add</button>
+    </div>
+    <ul id="productiveSitesList">
+      <li draggable="true">
+        <span class="drag-handle">☰</span>
+        <span class="text">example.com</span>
+        <button>Edit URL</button>
+        <span class="name">Example</span>
+        <button>Edit Name</button>
+        <button>Delete</button>
+      </li>
+    </ul>
   </div>
 
   <div id="Export" class="tabcontent">

@@ -457,7 +457,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Error in closeButton:', error)
     }
   });
-  /*document.getElementById('seeUrlsButton').addEventListener('click', async () => {
+  document.getElementById('savedUrlsButton').addEventListener('click', async () => {
     try {
       chrome.tabs.query({}, (tabs) => {
         const optionsUrl = chrome.runtime.getURL('options.html');
@@ -486,5 +486,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
       console.error('Error in seeUrlsButton:', error);
     }
-  });*/
+  });
 });

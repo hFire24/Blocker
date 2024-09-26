@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const optionsTab = document.getElementById('optionsTab');
   const analyticsTab = document.getElementById('analyticsTab');
   const savedUrlsTab = document.getElementById('savedUrlsTab');
+  const productiveUrlsTab = document.getElementById('productiveUrlsTab');
   const exportTab = document.getElementById('exportTab');
   const helpTab = document.getElementById('helpTab');
 
@@ -25,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
   optionsTab.addEventListener('click', () => openTab('Options'));
   analyticsTab.addEventListener('click', () => openTab('Analytics'));
   savedUrlsTab.addEventListener('click', () => openTab('SavedUrls'));
+  productiveUrlsTab.addEventListener('click', () => openTab('ProductiveUrls'))
   exportTab.addEventListener('click', () => openTab('Export'))
   helpTab.addEventListener('click', () => window.open('help.html'));
 

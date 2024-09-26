@@ -100,6 +100,14 @@
       font-size: 1rem;
       color: black;
     }
+    ul {
+      list-style-type: none;
+      margin: 0;
+      padding: 0;
+    }
+    #productiveUrls li a, #productiveUrls li a:visited {
+      color: white;
+    }
     @media only screen and (max-width: 505px) {
       .blocked-message {
         text-align: center;
@@ -154,8 +162,15 @@
       <a id="hiddenUnblock" style="position:fixed; left:35%; top:82%;">No, Unblock Site</a>
     </div>
     <div class="message-buttons">
-      <button id="editMessageButton" class="submit-reason-button" style="display:inline;">📝 Edit Message</button>
-      <button id="closeButton" class="focus-button">🔒 Close Tab</button>
+      <div>
+        <button id="savedUrlsButton" class="confirm-unblock-button">💾 View Saved URLs</button>
+        <button id="editMessageButton" class="submit-reason-button" style="display:inline;">📝 Edit Message</button>
+        <button id="closeButton" class="focus-button">🔒 Close Tab</button>
+      </div>
+      <h2>Productive Sites</h2>
+      <ul id="productiveUrls">
+        <li><a href="https://example.com">Example</a></li>
+      </ul>
     </div>
   </div>
   <script src="blocked.js"></script>
