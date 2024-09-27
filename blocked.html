@@ -103,17 +103,15 @@
     .message-buttons h2 {
       font-size: 1.5rem;
     }
-    ul {
-      list-style-type: none;
-      margin: 0;
-      padding: 0;
+    #productiveUrls {
       font-size: 1rem;
     }
-    ul li {
-      margin-bottom: 1rem;
-    }
-    ul li a, ul li a:visited {
+    #productiveUrls a, #productiveUrls a:visited {
       color: white;
+      margin-right: 20px;
+    }
+    #productiveUrls a:hover {
+      color: #CCC;
     }
     @media only screen and (max-width: 505px) {
       .blocked-message {
@@ -175,8 +173,8 @@
         <button id="closeButton" class="focus-button">🔒 Close Tab</button>
       </div>
       <h2>Productive Sites</h2>
-      <ul id="productiveUrls">
-      </ul>
+      <div id="productiveUrls">
+      </div>
     </div>
   </div>
   <script src="blocked.js"></script>

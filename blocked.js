@@ -97,12 +97,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     productiveSites.forEach(site => {
-      let li = document.createElement("li");
       let a = document.createElement("a");
       a.href = site.url;
       a.innerHTML = site.name;
-      li.appendChild(a);
-      productiveUrls.appendChild(li);
+      productiveUrls.appendChild(a);
     });
   });
 
