@@ -60,9 +60,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   let duration = 5;
   let saveBlockedUrls = 'reason';
   let reason = '';
+  let productiveSites = [];
+  let productiveUrls = document.getElementById('productiveUrls')
 
   chrome.storage.sync.get(['blockedPageBgColor', 'enableConfirmMessage', 'enableReasonInput', 'enableUbButtonDisabling', 'ubDisableDuration',
-    'enableTempUnblocking', 'unblockDuration', 'enableTimeInput', 'saveBlockedUrls'], (data) => {
+    'enableTempUnblocking', 'unblockDuration', 'enableTimeInput', 'saveBlockedUrls', 'productiveSites'], (data) => {
     enableConfirmMessage = data.enableConfirmMessage !== false;
     enableReasonInput = data.enableReasonInput || false;
     enableUbButtonDisabling = data.enableUbButtonDisabling || false;
@@ -72,6 +74,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     duration = (!isNaN(data.unblockDuration) && data.unblockDuration > 0 && data.unblockDuration <= 1440) ? parseInt(data.unblockDuration, 10) : 5;
     saveBlockedUrls = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : 'reason';
     document.body.style.backgroundColor = data.blockedPageBgColor !== undefined ? data.blockedPageBgColor : '#1E3A5F';
+    productiveSites = data.productiveSites !== undefined ? data.productiveSites : [];
 
     const unblockEmoji = document.getElementById("unblockEmoji");
     if (enableTimeInput) {
@@ -92,6 +95,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         unblockButton.disabled = false;
       }, disableDuration * 1000); // Disable for `disableDuration` seconds
     }
+
+    productiveSites.forEach(site => {
+      let li = document.createElement("li");
+      let a = document.createElement("a");
+      a.href = site.url;
+      a.innerHTML = site.name;
+      li.appendChild(a);
+      productiveUrls.appendChild(li);
+    });
   });
 
   setTimeout(() => {

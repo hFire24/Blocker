@@ -14,19 +14,21 @@
     #blockedSitesList, #productiveSitesList { list-style-type: none; padding: 0; }
     #blockedSitesList li, #productiveSitesList li, #Options div { margin-bottom: 10px; }
     .input-container { margin-top: 20px; display: flex; align-items: center; }
-    #blockedSitesList button, #productiveSitesList button, #productiveSitesList .name { margin-left: 10px; }
+    #blockedSitesList button, #productiveSitesList button, #productiveSitesList .name, #productiveSitesList .text { margin-left: 10px; }
     .disabled { text-decoration: line-through; }
     input[type="checkbox"] { margin-right: 10px; }
     select { margin-left: 10px; }
     .input-container { display: flex; flex-wrap: wrap; margin-bottom: 10px; }
     .input-container input, .input-container select, .input-container button { margin-right: 10px; }
-    .drag-handle { cursor: move; margin-right: 10px; }
+    .drag-handle { cursor: move; margin-right: 10px; flex-shrink: 0; }
     .edit-input { margin-right: 10px; }
     .star { margin-right: 10px; font-size: 125%; }
     .indented { margin-left: 20px; }
     table { border-collapse: collapse; }
     th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
     th { background-color: #f2f2f2; }
+    #productiveSitesList li { display: grid; grid-template-columns: 20px auto auto auto; }
+    #productiveSitesList .button-group { display: flex; gap: 0px; }
   </style>
 </head>
 <body>
@@ -172,14 +174,6 @@
       <button id="addProductiveButton">Add</button>
     </div>
     <ul id="productiveSitesList">
-      <li draggable="true">
-        <span class="drag-handle">☰</span>
-        <span class="text">example.com</span>
-        <button>Edit URL</button>
-        <span class="name">Example</span>
-        <button>Edit Name</button>
-        <button>Delete</button>
-      </li>
     </ul>
   </div>
 

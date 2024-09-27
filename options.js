@@ -61,6 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const addUrlInput = document.getElementById('addUrlInput');
   const addUrlButton = document.getElementById('addUrlButton');
 
+  const addProductiveInput = document.getElementById('addProductiveInput')
+  const addProductiveButton = document.getElementById('addProductiveButton');
+
   const backgroundColorSelect = document.getElementById('backgroundColorSelect');
   const confirmMessage = document.getElementById('enableConfirmMessage');
   const reasonInput = document.getElementById('enableReasonInput');
@@ -562,7 +565,9 @@ document.addEventListener('DOMContentLoaded', () => {
     e.stopPropagation();
     e.preventDefault();
     const targetItem = e.target.closest('li');
-    if (targetItem && draggedItem !== targetItem) {
+    const draggedList = draggedItem.parentNode; // Get the list the dragged item belongs to
+    const targetList = targetItem ? targetItem.parentNode : null;
+    if (targetList && draggedList === targetList && draggedItem !== targetItem) {
       const rect = targetItem.getBoundingClientRect();
       const middleY = rect.top + rect.height / 2;
       if (e.clientY > middleY) {
@@ -571,16 +576,24 @@ document.addEventListener('DOMContentLoaded', () => {
         targetItem.parentNode.insertBefore(draggedItem, targetItem);
       }
     } else if (!targetItem) {
-      // If dropped on empty space, append to the end of the list
-      blockedList.appendChild(draggedItem);
+      // Append to the end of the list if dropped on empty space
+      draggedList.appendChild(draggedItem);
     }
-    updateBlockedOrder();
+    // Update the order in storage based on the list type (blocked or productive)
+    if (draggedList.id === 'blockedSitesList') {
+      updateBlockedOrder(); // Update blocked site order
+    } else if (draggedList.id === 'productiveSitesList') {
+      updateProductiveOrder(); // Update productive URLs order
+    }
     return false;
   }
 
   function handleDragEnd() {
     this.style.opacity = '1';
     draggedItem = null;
+
+    // Save the new order after drag ends
+    saveProductiveSites();
   }
 
   function updateBlockedOrder() {
@@ -604,6 +617,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
       chrome.storage.sync.set({ blocked: newBlocked, enabled, favorites }, () => {
         console.log('Blocked list order updated');
+      });
+    });
+  }
+
+  function updateProductiveOrder() {
+    const newOrder = Array.from(document.getElementById('productiveSitesList').children).map(li => {
+      return li.querySelector('.text').textContent.trim(); // Get URL text
+    });
+
+    // Save the new productive URL order to chrome storage
+    chrome.storage.sync.get(['productive'], (data) => {
+      const productive = data.productive || [];
+      // Assuming the productive list is just a flat array of URLs, reorder it based on the new order
+      productive.sort((a, b) => newOrder.indexOf(a) - newOrder.indexOf(b));
+
+      chrome.storage.sync.set({ productive }, () => {
+        console.log('Productive URLs order updated');
       });
     });
   }
@@ -758,6 +788,176 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load saved URLs when the Saved URLs tab is opened
   savedUrlsTab.addEventListener('click', loadSavedUrls);
+
+  addProductiveButton.addEventListener('click', () => {
+    const url = addProductiveInput.value.trim();
+    if (url.startsWith('https://')) {
+      // Add the valid URL to the list
+      let name = prompt("Name this site.", "Productive Site");
+      addProductiveUrlToList(url, name, true);
+    } else {
+      alert('Please enter a valid URL that starts with https://');
+    }
+  });
+
+  function addProductiveUrlToList(url, name = '', adding) {
+    const productiveSitesList = document.getElementById('productiveSitesList');
+
+    // Create a new list item for the URL
+    const listItem = document.createElement('li');
+    listItem.draggable = true;
+
+    // Drag handle for reordering
+    const dragHandle = document.createElement('span');
+    dragHandle.textContent = '☰';
+    dragHandle.className = 'drag-handle';
+
+    // Display URL
+    const itemText = document.createElement('span');
+    itemText.textContent = url;
+    itemText.classList.add('text');
+
+    // Optional name
+    const nameText = document.createElement('span');
+    nameText.textContent = name || 'Productive Site';
+    nameText.classList.add('name');
+
+    // Group buttons in a flex container
+    const buttonGroup = document.createElement('div');
+    buttonGroup.className = 'button-group'
+
+    // Edit URL button
+    const editUrlButton = document.createElement('button');
+    editUrlButton.textContent = 'Edit URL';
+    editUrlButton.addEventListener('click', () => {
+      const newUrl = prompt('Enter new URL:', url);
+      if (newUrl && newUrl.startsWith('https://')) {
+        itemText.textContent = newUrl;
+        url = newUrl; // Update the URL in this list item
+        saveProductiveSites(); // Save changes to chrome.storage.sync
+      } else {
+        alert('Please enter a valid URL that starts with https://');
+      }
+    });
+
+    // Edit Name button
+    const editNameButton = document.createElement('button');
+    editNameButton.textContent = 'Edit Name';
+    editNameButton.addEventListener('click', () => {
+      const newName = prompt('Enter new name:', nameText.textContent);
+      if (newName) {
+        nameText.textContent = newName;
+        name = newName; // Update the name in this list item
+        saveProductiveSites(); // Save changes to chrome.storage.sync
+      }
+    });
+
+    // Delete button
+    const deleteButton = document.createElement('button');
+    deleteButton.textContent = 'Delete';
+    deleteButton.addEventListener('click', () => {
+      if (confirm(`Are you sure you want to delete ${url}?`)) {
+        listItem.remove();
+        saveProductiveSites(); // Save changes to chrome.storage.sync after deletion
+      }
+    });
+
+    //Append buttons to the button group
+    buttonGroup.appendChild(editUrlButton);
+    buttonGroup.appendChild(editNameButton);
+    buttonGroup.appendChild(deleteButton);
+
+    // Append all elements to the list item
+    listItem.appendChild(dragHandle);
+    listItem.appendChild(itemText);
+    listItem.appendChild(nameText);
+    listItem.appendChild(buttonGroup)
+
+    // Add drag and drop event listeners for reordering
+    listItem.addEventListener('dragstart', handleDragStart);
+    listItem.addEventListener('dragover', handleDragOver);
+    listItem.addEventListener('drop', handleDrop);
+    listItem.addEventListener('dragend', handleDragEnd);
+
+    // Append the new list item to the productiveSitesList
+    productiveSitesList.appendChild(listItem);
+
+    // Save to chrome.storage.sync after adding
+    if(adding) saveProductiveSites();
+    else adjustColumnWidths();
+  }
+
+  function saveProductiveSites() {
+    const productiveSitesList = document.getElementById('productiveSitesList');
+    const productiveSitesArray = Array.from(productiveSitesList.children).map(li => {
+      return {
+        url: li.querySelector('.text').textContent.trim(), // URL
+        name: li.querySelector('.name').textContent.trim()  // Name
+      };
+    });
+
+    // Save to chrome.storage.sync
+    chrome.storage.sync.set({ productiveSites: productiveSitesArray }, () => {
+      console.log('Productive sites saved:', productiveSitesArray);
+    });
+
+    adjustColumnWidths();
+  }
+
+  function loadProductiveSites() {
+    chrome.storage.sync.get(['productiveSites'], (data) => {
+      const productiveSitesArray = data.productiveSites || [];
+      const productiveSitesList = document.getElementById('productiveSitesList');
+      
+      // Clear current list
+      productiveSitesList.innerHTML = '';
+
+      // Add each productive site back to the list
+      productiveSitesArray.forEach(site => {
+        addProductiveUrlToList(site.url, site.name, false);
+      });
+    });
+  }
+
+  // Load productive sites when the Productive URLs tab is clicked
+  document.getElementById('productiveUrlsTab').addEventListener('click', loadProductiveSites);
+
+  function adjustColumnWidths() {
+    const productiveSitesList = document.getElementById('productiveSitesList');
+    
+    let longestUrl = 0;
+    let longestName = 0;
+  
+    // Calculate the longest URL and Name widths
+    Array.from(productiveSitesList.children).forEach(li => {
+      const url = li.querySelector('.text').textContent;
+      const name = li.querySelector('.name').textContent;
+  
+      const urlWidth = getTextWidth(url, '12px Arial'); // Adjust the font and size if needed
+      const nameWidth = getTextWidth(name, '12px Arial');
+  
+      if (urlWidth > longestUrl) longestUrl = urlWidth;
+      if (nameWidth > longestName) longestName = nameWidth;
+    });
+  
+    // Add some padding (n + m pixels) to the calculated widths
+    longestUrl += 20;  // Add extra space for padding
+    longestName += 20; // Add extra space for padding
+  
+    // Apply the calculated width to all URL and Name columns
+    Array.from(productiveSitesList.children).forEach(li => {
+      li.style.gridTemplateColumns = `20px ${longestUrl}px ${longestName}px auto`;
+    });
+    console.log(longestUrl + ' ' + longestName);
+  }
+  
+  function getTextWidth(text, font) {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    context.font = font;
+    const metrics = context.measureText(text);
+    return metrics.width;
+  }
 
   document.getElementById('exportButton').addEventListener('click', exportData);
   document.getElementById('importButton').addEventListener('click', () => {
