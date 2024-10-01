@@ -813,7 +813,8 @@ document.addEventListener('DOMContentLoaded', () => {
     dragHandle.className = 'drag-handle';
 
     // Display URL
-    const itemText = document.createElement('span');
+    const itemText = document.createElement('a');
+    itemText.href = url;
     itemText.textContent = url;
     itemText.classList.add('text');
 
