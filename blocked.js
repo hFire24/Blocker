@@ -61,10 +61,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   let saveBlockedUrls = 'reason';
   let reason = '';
   let productiveSites = [];
-  let productiveUrls = document.getElementById('productiveUrls')
+  let productiveUrls = document.getElementById('productiveUrls');
+  let book = 0;
+  let chapter = 0;
+  let verse = -1;
 
   chrome.storage.sync.get(['blockedPageBgColor', 'enableConfirmMessage', 'enableReasonInput', 'enableUbButtonDisabling', 'ubDisableDuration',
-    'enableTempUnblocking', 'unblockDuration', 'enableTimeInput', 'saveBlockedUrls', 'productiveSites'], (data) => {
+    'enableTempUnblocking', 'unblockDuration', 'enableTimeInput', 'saveBlockedUrls', 'productiveSites',
+    'book', 'chapter', 'verse'], (data) => {
     enableConfirmMessage = data.enableConfirmMessage !== false;
     enableReasonInput = data.enableReasonInput || false;
     enableUbButtonDisabling = data.enableUbButtonDisabling || false;
@@ -75,6 +79,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     saveBlockedUrls = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : 'reason';
     document.body.style.backgroundColor = data.blockedPageBgColor !== undefined ? data.blockedPageBgColor : '#1E3A5F';
     productiveSites = data.productiveSites !== undefined ? data.productiveSites : [];
+    book = data.book || 0;
+    chapter = data.chapter || 0;
+    verse = data.verse || -1;
 
     const unblockEmoji = document.getElementById("unblockEmoji");
     if (enableTimeInput) {
@@ -156,7 +163,78 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
       }
     });
+    goToNextVerse();
+    saveVerseData();
   }, 100);
+
+  async function goToPreviousVerse() {
+    const bom = await fetchData();
+  
+    // Check if we're on the first verse of the current chapter
+    if (verse === 0) {
+      // Move to the previous chapter
+      chapter--;
+      if (chapter < 0) {
+        // Move to the previous book
+        book--;
+        if (book < 0) {
+          // Wrap around to the last book if necessary
+          book = bom.length - 1;
+        }
+        // Wrap around to the last chapter of the previous book
+        chapter = bom[book].chapters.length - 1;
+      }
+      // Set verse to the last verse of the new chapter
+      verse = bom[book].chapters[chapter].verses.length - 1;
+    } else {
+      // Otherwise, simply move to the previous verse
+      verse--;
+    }
+  
+    await saveVerseData();
+    await displayVerse();
+  }  
+
+  async function goToNextVerse() {
+    const bom = await fetchData();
+    verse++;
+
+    if (verse === bom[book].chapters[chapter].verses.length) {
+      chapter++;
+      if (chapter === bom[book].chapters.length) {
+        book++;
+        if (book === bom.length) {
+          book = 0
+        }
+        chapter = 0;
+      }
+      verse = 0;
+    }
+
+    await saveVerseData();
+    await displayVerse();
+  }
+
+  async function fetchData() {
+    try {
+      const response = await fetch(chrome.runtime.getURL('assets/book-of-mormon.json'));
+      const data = await response.json();
+      return data.books;
+    } catch (error) {
+      console.error('Error fetching chapter data:', error);
+    }
+  }
+
+  async function saveVerseData() {
+    return chrome.storage.sync.set({ book, chapter, verse });
+  }
+
+  async function displayVerse() {
+    const bom = await fetchData();
+    const verseData = bom[book].chapters[chapter].verses[verse];
+    document.getElementById('message').innerHTML = verseData.reference;
+    document.getElementById('verse').innerHTML = verseData.text;
+  }
 
   function getDisplayText(pattern) {
     let displayText = pattern;
@@ -497,4 +575,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Error in seeUrlsButton:', error);
     }
   });
+  document.addEventListener('keydown', async function(event) {
+    if (event.key === 'ArrowLeft') { // Left arrow key
+      await goToPreviousVerse();
+    } else if (event.key === 'ArrowRight') { // Right arrow key
+      await goToNextVerse();
+    }
+  });  
 });
