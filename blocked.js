@@ -62,13 +62,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   let reason = '';
   let productiveSites = [];
   let productiveUrls = document.getElementById('productiveUrls');
+  let enableScriptures = false;
+  let autoAdvance = false;
   let book = 0;
   let chapter = 0;
   let verse = -1;
 
   chrome.storage.sync.get(['blockedPageBgColor', 'enableConfirmMessage', 'enableReasonInput', 'enableUbButtonDisabling', 'ubDisableDuration',
     'enableTempUnblocking', 'unblockDuration', 'enableTimeInput', 'saveBlockedUrls', 'productiveSites',
-    'book', 'chapter', 'verse'], (data) => {
+    'enableScriptures', 'enableAutoAdvance', 'book', 'chapter', 'verse'], (data) => {
     enableConfirmMessage = data.enableConfirmMessage !== false;
     enableReasonInput = data.enableReasonInput || false;
     enableUbButtonDisabling = data.enableUbButtonDisabling || false;
@@ -79,11 +81,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     saveBlockedUrls = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : 'reason';
     document.body.style.backgroundColor = data.blockedPageBgColor !== undefined ? data.blockedPageBgColor : '#1E3A5F';
     productiveSites = data.productiveSites !== undefined ? data.productiveSites : [];
+    enableScriptures = data.enableScriptures || false;
+    autoAdvance = data.enableAutoAdvance || false;
     book = data.book || 0;
     chapter = data.chapter || 0;
     verse = data.verse;
     if(data.verse === undefined)
-      verse = -1;
+      verse = autoAdvance ? -1 : 0;
 
     const unblockEmoji = document.getElementById("unblockEmoji");
     if (enableTimeInput) {
@@ -165,11 +169,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
       }
     });
-    console.log(book, chapter, verse);
-    goToNextVerse();
+    if(enableScriptures) {
+      autoAdvance ? goToNextVerse() : displayVerse();
+    }
   }, 100);
 
   async function goToPreviousVerse() {
+    if (!enableScriptures) return;
     const bom = await fetchData();
   
     // Check if we're on the first verse of the current chapter
@@ -198,6 +204,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }  
 
   async function goToNextVerse() {
+    if (!enableScriptures) return;
     const bom = await fetchData();
     verse++;
 
@@ -583,5 +590,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else if (event.key === 'ArrowRight') { // Right arrow key
       await goToNextVerse();
     }
-  });  
+  });
 });
