@@ -81,7 +81,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     productiveSites = data.productiveSites !== undefined ? data.productiveSites : [];
     book = data.book || 0;
     chapter = data.chapter || 0;
-    verse = data.verse || -1;
+    verse = data.verse;
+    if(data.verse === undefined)
+      verse = -1;
 
     const unblockEmoji = document.getElementById("unblockEmoji");
     if (enableTimeInput) {
@@ -163,8 +165,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
       }
     });
+    console.log(book, chapter, verse);
     goToNextVerse();
-    saveVerseData();
   }, 100);
 
   async function goToPreviousVerse() {
@@ -226,7 +228,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function saveVerseData() {
-    return chrome.storage.sync.set({ book, chapter, verse });
+    chrome.storage.sync.set({ book, chapter, verse });
   }
 
   async function displayVerse() {
