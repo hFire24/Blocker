@@ -170,7 +170,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
     if(enableScriptures) {
-      autoAdvance ? goToNextVerse() : displayVerse();
+      document.getElementById("playback").style.display = "block";
+      if(autoAdvance) {
+        document.getElementById("playpause").innerHTML = "⏸️";
+        goToNextVerse();
+      } else {
+        document.getElementById("playpause").innerHTML = "▶️";
+        displayVerse();
+      }
     }
   }, 100);
 
@@ -422,7 +429,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           document.querySelector(".default-buttons").style.display = "none";
           document.querySelector(".confirm-message").style.display = "none";
           document.querySelector(".message-buttons").style.display = "block";
-          document.querySelector("p").innerHTML = "";
+          document.querySelector("#verse").innerHTML = "";
+          document.querySelector("#playback").style.display = "none";
           document.getElementById("blockCountMessage").innerHTML = "";
           document.getElementById("durationText").innerHTML = "";
           document.getElementById("message").innerHTML = data.message !== undefined ? data.message : "You can do it! Stay focused!";
@@ -584,6 +592,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Error in seeUrlsButton:', error);
     }
   });
+  document.getElementById('previous').addEventListener('click', goToPreviousVerse);
+  document.getElementById('next').addEventListener('click', goToNextVerse);
+  document.getElementById('playpause').addEventListener('click', () => {
+    autoAdvance = !autoAdvance;
+    document.getElementById('playpause').innerHTML = autoAdvance ? '⏸️' : '▶️';
+    chrome.storage.sync.set({ enableAutoAdvance: autoAdvance });
+  })
   document.addEventListener('keydown', async function(event) {
     if (event.key === 'ArrowLeft') { // Left arrow key
       await goToPreviousVerse();
