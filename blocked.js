@@ -64,7 +64,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   let productiveUrls = document.getElementById('productiveUrls')
 
   chrome.storage.sync.get(['blockedPageBgColor', 'enableConfirmMessage', 'enableReasonInput', 'enableUbButtonDisabling', 'ubDisableDuration',
-    'enableTempUnblocking', 'unblockDuration', 'enableTimeInput', 'saveBlockedUrls', 'productiveSites'], (data) => {
+    'enableTempUnblocking', 'unblockDuration', 'enableTimeInput', 'saveBlockedUrls', 'productiveSites',
+    'enableScriptures', 'enableAutoAdvance', 'book', 'chapter', 'verse'], async (data) => {
     enableConfirmMessage = data.enableConfirmMessage !== false;
     enableReasonInput = data.enableReasonInput || false;
     enableUbButtonDisabling = data.enableUbButtonDisabling || false;
@@ -96,12 +97,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       }, disableDuration * 1000); // Disable for `disableDuration` seconds
     }
 
-    productiveSites.forEach(site => {
+    await productiveSites.forEach(site => {
       let a = document.createElement("a");
       a.href = site.url;
       a.innerHTML = site.name;
       productiveUrls.appendChild(a);
     });
+
+    document.getElementById("focusButton").disabled = false;
   });
 
   setTimeout(() => {

@@ -43,7 +43,7 @@
     .blocked-message .unblock-button:hover {
       background-color: #218838;
     }
-    .blocked-message .unblock-button:disabled {
+    .blocked-message .unblock-button:disabled, .blocked-message .focus-button:disabled {
       cursor: not-allowed; /* Change cursor to indicate disabled state */
       opacity: 0.65; /* Slightly faded look */
     }
@@ -136,7 +136,7 @@
       <h2>What do you want to do now?</h2>
       <button id="unblockButton" class="unblock-button"><span id="unblockEmoji">🔓</span> Unblock Site</button>
       <button id="reasonButton" class="confirm-unblock-button">📝 Give Reason</button>
-      <button id="focusButton" class="focus-button">🔒 Remain Focused</button>
+      <button id="focusButton" disabled class="focus-button">🔒 Remain Focused</button>
     </div>
     <div class="time-input">
       <h2>How long should this website be unblocked for?</h2>
