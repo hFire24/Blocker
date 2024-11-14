@@ -80,16 +80,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const messageField = document.getElementById('message');
   const notiReblock = document.getElementById('enableNotifications');
   const scriptures = document.getElementById('scriptures');
-  const autoAdvance = document.getElementById('autoAdvance');
+  const ubEnableVerse = document.getElementById('ubEnableVerse');
 
   let draggedItem = null;
+
+  chrome.storage.sync.remove('enableAutoAdvance');
 
   // Load blocked items from storage
   chrome.storage.sync.get(['blocked', 'enabled', 'favorites', 
   'blockedPageBgColor', 'enableConfirmMessage', 'enableReasonInput', 'enableUbButtonDisabling', 'ubDisableDuration', 
   'enableTimeInput', 'enableTempUnblocking', 'enableTempUbOptions', 'enableTempUbPopup', 'unblockDuration', 'saveBlockedUrls',
   'focusOption', 'redirectUrl', 'message', 'enableNotiReblock',
-  'enableScriptures', 'enableAutoAdvance'], (data) => {
+  'enableScriptures', 'requireVerse'], (data) => {
     const blocked = data.blocked || [];
     const enabled = data.enabled || [];
     const favorites = data.favorites || [];
@@ -115,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     messageField.value = data.message !== undefined ? data.message : "You can do it! Stay focused!";
     notiReblock.checked = data.enableNotiReblock !== undefined ? data.enableNotiReblock : false;
     scriptures.checked = data.enableScriptures !== undefined ? data.enableScriptures : false;
-    autoAdvance.checked = data.enableAutoAdvance !== undefined ? data.enableAutoAdvance : false;
+    ubEnableVerse.checked = data.requireVerse !== undefined ? data.requireVerse : false;
 
     updateCheckboxState();
     toggleFocusField();
@@ -159,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById("resetMessage").addEventListener('click', resetMessage);
   notiReblock.addEventListener('change',saveOptions);
   scriptures.addEventListener('change', updateCheckboxState);
-  autoAdvance.addEventListener('change', saveOptions);
+  ubEnableVerse.addEventListener('change', saveOptions);
 
   function toggleTempUnblocking() {
     if (!tempUnblocking.checked) {
@@ -184,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateCheckboxState() {
     tempUbOptions.disabled = !tempUnblocking.checked ? true : false;
     tempUbPopup.disabled = !tempUnblocking.checked ? true : false;
-    autoAdvance.disabled = !scriptures.checked ? true : false;
+    ubEnableVerse.disabled = !scriptures.checked ? true : false;
     saveOptions();
   }
 
@@ -225,11 +227,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const message = messageField.value;
     const enableNotiReblock = notiReblock.checked;
     const enableScriptures = scriptures.checked;
-    const enableAutoAdvance = autoAdvance.disabled ? false : autoAdvance.checked;
+    const requireVerse = ubEnableVerse.disabled ? false : ubEnableVerse.checked;
     chrome.storage.sync.set({ blockedPageBgColor, enableConfirmMessage, enableReasonInput, enableUbButtonDisabling, ubDisableDuration, 
       enableTimeInput, enableTempUnblocking, enableTempUbOptions, enableTempUbPopup, unblockDuration, saveBlockedUrls,
       focusOption, redirectUrl, message, enableNotiReblock,
-      enableScriptures, enableAutoAdvance });
+      enableScriptures, requireVerse });
   }
 
   addUrlButton.addEventListener('click', () => {

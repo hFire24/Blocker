@@ -63,14 +63,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   let productiveSites = [];
   let productiveUrls = document.getElementById('productiveUrls');
   let enableScriptures = false;
-  let autoAdvance = false;
   let book = 0;
   let chapter = 0;
   let verse = -1;
+  let nextButtonClicked = true;
+  let unblockButtonEnabled = true;
 
   chrome.storage.sync.get(['blockedPageBgColor', 'enableConfirmMessage', 'enableReasonInput', 'enableUbButtonDisabling', 'ubDisableDuration',
     'enableTempUnblocking', 'unblockDuration', 'enableTimeInput', 'saveBlockedUrls', 'productiveSites',
-    'enableScriptures', 'enableAutoAdvance', 'book', 'chapter', 'verse'], async (data) => {
+    'enableScriptures', 'requireVerse', 'book', 'chapter', 'verse'], async (data) => {
     enableConfirmMessage = data.enableConfirmMessage !== false;
     enableReasonInput = data.enableReasonInput || false;
     enableUbButtonDisabling = data.enableUbButtonDisabling || false;
@@ -82,12 +83,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.body.style.backgroundColor = data.blockedPageBgColor !== undefined ? data.blockedPageBgColor : '#1E3A5F';
     productiveSites = data.productiveSites !== undefined ? data.productiveSites : [];
     enableScriptures = data.enableScriptures || false;
-    autoAdvance = data.enableAutoAdvance || false;
+    requireVerse = data.requireVerse || false;
     book = data.book || 0;
     chapter = data.chapter || 0;
-    verse = data.verse;
-    if(data.verse === undefined)
-      verse = autoAdvance ? -1 : 0;
+    verse = data.verse || 0;
 
     const unblockEmoji = document.getElementById("unblockEmoji");
     if (enableTimeInput) {
@@ -104,8 +103,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (enableUbButtonDisabling) {
       // Disable the button and start the timer
       unblockButton.disabled = true;
+      unblockButtonEnabled = false;
       setTimeout(() => {
-        unblockButton.disabled = false;
+        unblockButtonEnabled = true;
+        checkUnblockAvailability();
       }, disableDuration * 1000); // Disable for `disableDuration` seconds
     }
 
@@ -173,15 +174,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     if(enableScriptures) {
       document.getElementById("playback").style.display = "block";
-      if(autoAdvance) {
-        document.getElementById("playpause").innerHTML = "⏸️";
-        goToNextVerse();
-      } else {
-        document.getElementById("playpause").innerHTML = "▶️";
-        displayVerse();
+      displayVerse();
+      if(requireVerse) {
+        unblockButton.disabled = true;
+        nextButtonClicked = false;
+        document.getElementById('next').addEventListener('click', () => {
+          nextButtonClicked = true;
+          checkUnblockAvailability();
+        });
       }
     }
   }, 100);
+
+  function checkUnblockAvailability() {
+    if (nextButtonClicked && unblockButtonEnabled) {
+      unblockButton.disabled = false;
+    } else {
+      unblockButton.disabled = true;
+    }
+  }
 
   async function goToPreviousVerse() {
     if (!enableScriptures) return;
@@ -596,11 +607,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('previous').addEventListener('click', goToPreviousVerse);
   document.getElementById('next').addEventListener('click', goToNextVerse);
-  document.getElementById('playpause').addEventListener('click', () => {
-    autoAdvance = !autoAdvance;
-    document.getElementById('playpause').innerHTML = autoAdvance ? '⏸️' : '▶️';
-    chrome.storage.sync.set({ enableAutoAdvance: autoAdvance });
-  })
   document.addEventListener('keydown', async function(event) {
     if (event.key === 'ArrowLeft') { // Left arrow key
       await goToPreviousVerse();
