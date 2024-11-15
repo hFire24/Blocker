@@ -63,15 +63,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   let productiveSites = [];
   let productiveUrls = document.getElementById('productiveUrls');
   let enableScriptures = false;
+  let verseHidden = false;
   let book = 0;
   let chapter = 0;
   let verse = -1;
   let nextButtonClicked = true;
   let unblockButtonEnabled = true;
+  let clicksSinceEnabling = 0;
+  let allowUbReminder = true;
 
   chrome.storage.sync.get(['blockedPageBgColor', 'enableConfirmMessage', 'enableReasonInput', 'enableUbButtonDisabling', 'ubDisableDuration',
     'enableTempUnblocking', 'unblockDuration', 'enableTimeInput', 'saveBlockedUrls', 'productiveSites',
-    'enableScriptures', 'requireVerse', 'book', 'chapter', 'verse'], async (data) => {
+    'enableScriptures', 'requireVerse', 'allowUbReminder', 'book', 'chapter', 'verse'], async (data) => {
     enableConfirmMessage = data.enableConfirmMessage !== false;
     enableReasonInput = data.enableReasonInput || false;
     enableUbButtonDisabling = data.enableUbButtonDisabling || false;
@@ -84,6 +87,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     productiveSites = data.productiveSites !== undefined ? data.productiveSites : [];
     enableScriptures = data.enableScriptures || false;
     requireVerse = data.requireVerse || false;
+    allowUbReminder = data.allowUbReminder !== false;
     book = data.book || 0;
     chapter = data.chapter || 0;
     verse = data.verse || 0;
@@ -178,10 +182,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       if(requireVerse) {
         unblockButton.disabled = true;
         nextButtonClicked = false;
-        document.getElementById('next').addEventListener('click', () => {
-          nextButtonClicked = true;
-          checkUnblockAvailability();
-        });
       }
     }
   }, 100);
@@ -225,22 +225,30 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function goToNextVerse() {
     if (!enableScriptures) return;
-    const bom = await fetchData();
-    verse++;
+    
+    if(!verseHidden) {
+      const bom = await fetchData();
+      verse++;
 
-    if (verse === bom[book].chapters[chapter].verses.length) {
-      chapter++;
-      if (chapter === bom[book].chapters.length) {
-        book++;
-        if (book === bom.length) {
-          book = 0
+      if (verse === bom[book].chapters[chapter].verses.length) {
+        chapter++;
+        if (chapter === bom[book].chapters.length) {
+          book++;
+          if (book === bom.length) {
+            book = 0
+          }
+          chapter = 0;
         }
-        chapter = 0;
+        verse = 0;
       }
-      verse = 0;
+      await saveVerseData();
     }
-
-    await saveVerseData();
+    if(requireVerse) {
+      nextButtonClicked = true;
+      checkUnblockAvailability();
+    }
+    if(enableUbButtonDisabling && unblockButtonEnabled || !enableUbButtonDisabling)
+      clicksSinceEnabling++;
     await displayVerse();
   }
 
@@ -259,10 +267,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function displayVerse() {
-    const bom = await fetchData();
-    const verseData = bom[book].chapters[chapter].verses[verse];
-    document.getElementById('message').innerHTML = verseData.reference;
-    document.getElementById('verse').innerHTML = verseData.text;
+    if(clicksSinceEnabling === 1 && (requireVerse || enableUbButtonDisabling) && allowUbReminder) {
+      document.getElementById('message').innerHTML = 'Unblock Button Available';
+      document.getElementById('verse').innerHTML = 'Hit the "Unblock Site" button to unblock site, or hit ⏩ to continue reading.';
+      verseHidden = true;
+    }
+    else {
+      const bom = await fetchData();
+      const verseData = bom[book].chapters[chapter].verses[verse];
+      document.getElementById('message').innerHTML = verseData.reference;
+      document.getElementById('verse').innerHTML = verseData.text;
+      verseHidden = false;
+    }
   }
 
   function getDisplayText(pattern) {
