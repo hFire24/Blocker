@@ -77,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const blockUrlSelect = document.getElementById('blockUrlSelect');
   const focusSelect = document.getElementById('focusSelect');
   const redirectField = document.getElementById('redirectPage');
+  const displayMessage = document.getElementById('messageCheckbox');
   const messageField = document.getElementById('message');
   const notiReblock = document.getElementById('enableNotifications');
 
@@ -86,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
   chrome.storage.sync.get(['blocked', 'enabled', 'favorites', 
   'blockedPageBgColor', 'enableConfirmMessage', 'enableReasonInput', 'enableUbButtonDisabling', 'ubDisableDuration', 
   'enableTimeInput', 'enableTempUnblocking', 'enableTempUbOptions', 'enableTempUbPopup', 'unblockDuration', 'saveBlockedUrls',
-  'focusOption', 'redirectUrl', 'message', 'enableNotiReblock'], (data) => {
+  'focusOption', 'redirectUrl', 'enableMessage', 'message', 'enableNotiReblock'], (data) => {
     const blocked = data.blocked || [];
     const enabled = data.enabled || [];
     const favorites = data.favorites || [];
@@ -109,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
     blockUrlSelect.value = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : "reason";
     focusSelect.value = data.focusOption !== undefined ? data.focusOption : "close";
     redirectField.value = data.redirectUrl !== undefined ? data.redirectUrl : "";
+    displayMessage.checked = data.enableMessage !== undefined ? data.enableMessage : false;
     messageField.value = data.message !== undefined ? data.message : "You can do it! Stay focused!";
     notiReblock.checked = data.enableNotiReblock !== undefined ? data.enableNotiReblock : false;
 
@@ -150,6 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
   blockUrlSelect.addEventListener('change', saveOptions);
   focusSelect.addEventListener('change', toggleFocusField);
   document.getElementById("saveUrl").addEventListener('click', saveOptions);
+  displayMessage.addEventListener('click',updateCheckboxState);
   document.getElementById("saveMessage").addEventListener('click', saveOptions);
   document.getElementById("resetMessage").addEventListener('click', resetMessage);
   notiReblock.addEventListener('change',saveOptions);
@@ -177,20 +180,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateCheckboxState() {
     tempUbOptions.disabled = !tempUnblocking.checked ? true : false;
     tempUbPopup.disabled = !tempUnblocking.checked ? true : false;
+    messageField.disabled = !displayMessage.checked ? true : false;
     saveOptions();
   }
 
   function toggleFocusField() {
-    document.getElementById("redirectOptions").style.display = "none";
-    document.getElementById("messageOptions").style.display = "none";
-    switch(focusSelect.value) {
-      case "redirect":
-        document.getElementById("redirectOptions").style.display = "inline";
-        break;
-      case "message":
-        document.getElementById("messageOptions").style.display = "inline";
-        break;
-    }
+    document.getElementById("redirectOptions").style.display = focusSelect.value === "redirect" ? "inline" : "none";
     saveOptions();
   }
 
@@ -214,11 +209,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveBlockedUrls = blockUrlSelect.value;
     const focusOption = focusSelect.value;
     const redirectUrl = redirectField.value;
+    const enableMessage = displayMessage.checked;
     const message = messageField.value;
     const enableNotiReblock = notiReblock.checked;
     chrome.storage.sync.set({ blockedPageBgColor, enableConfirmMessage, enableReasonInput, enableUbButtonDisabling, ubDisableDuration, 
       enableTimeInput, enableTempUnblocking, enableTempUbOptions, enableTempUbPopup, unblockDuration, saveBlockedUrls,
-      focusOption, redirectUrl, message, enableNotiReblock });
+      focusOption, redirectUrl, enableMessage, message, enableNotiReblock });
   }
 
   addUrlButton.addEventListener('click', () => {
