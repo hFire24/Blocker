@@ -108,16 +108,19 @@
       </select>
     </div>
     <div>
-      <label for="focusSelect">When "Remain Focused" is pressed </label>
+      <label for="focusSelect">When tab is closed </label>
       <select id="focusSelect">
         <option value="close">Close Tab</option>
         <option value="redirect">Redirect to Page</option>
-        <option value="message">Display Message</option>
       </select>
       <span id="redirectOptions" style="display:none;">
         <input type="text" id="redirectPage" placeholder="insert URL here" size="50"> <button id="saveUrl">Save</button>
       </span>
-      <span id="messageOptions" style="display:none;">
+    </div>
+    <div>
+      <input type="checkbox" id="messageCheckbox">
+      <label for="messageCheckbox">Display Message After "Remain Focused" is pressed </label>
+      <span id="messageOptions">
         <input type="text" id="message" placeholder="insert message here" size="50"> <button id="saveMessage">Save</button> <button id="resetMessage">Reset</button>
       </span>
     </div>

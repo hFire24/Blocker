@@ -449,23 +449,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function remainFocused() {
-    chrome.storage.sync.get(['focusOption', 'redirectUrl', 'message'], (data) => {
-      switch(data.focusOption) {
-        case ("redirect"):
-          window.location.href = data.redirectUrl;
-          break;
-        case ("message"):
-          document.querySelector(".default-buttons").style.display = "none";
-          document.querySelector(".confirm-message").style.display = "none";
-          document.querySelector(".message-buttons").style.display = "block";
-          document.querySelector("#verse").innerHTML = "";
-          document.querySelector("#playback").style.display = "none";
-          document.getElementById("blockCountMessage").innerHTML = "";
-          document.getElementById("durationText").innerHTML = "";
-          document.getElementById("message").innerHTML = data.message !== undefined ? data.message : "You can do it! Stay focused!";
-          break;
-        default:
-          closeTab();
+    chrome.storage.sync.get(['focusOption', 'redirectUrl', 'enableMessage', 'message'], (data) => {
+      if(data.enableMessage) {
+        document.querySelector(".default-buttons").style.display = "none";
+        document.querySelector(".confirm-message").style.display = "none";
+        document.querySelector(".message-buttons").style.display = "block";
+        document.querySelector("p").innerHTML = "";
+        document.getElementById("blockCountMessage").innerHTML = "";
+        document.getElementById("durationText").innerHTML = "";
+        document.getElementById("message").innerHTML = data.message !== undefined ? data.message : "You can do it! Stay focused!";
+      } else if (data.focusOption === "redirect") {
+        window.location.href = data.redirectUrl;
+      } else {
+        closeTab();
       }
     });
   }
@@ -586,7 +582,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('closeButton').addEventListener('click', () => {
     try {
-      closeTab();
+      chrome.storage.sync.get(['focusOption', 'redirectUrl', 'enableMessage', 'message'], (data) => {
+        if (data.focusOption === "redirect") {
+          window.location.href = data.redirectUrl;
+        } else {
+          closeTab();
+        }
+      });
     } catch (error) {
       console.error('Error in closeButton:', error)
     }

@@ -77,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const blockUrlSelect = document.getElementById('blockUrlSelect');
   const focusSelect = document.getElementById('focusSelect');
   const redirectField = document.getElementById('redirectPage');
+  const displayMessage = document.getElementById('messageCheckbox');
   const messageField = document.getElementById('message');
   const notiReblock = document.getElementById('enableNotifications');
   const scriptures = document.getElementById('scriptures');
@@ -91,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
   chrome.storage.sync.get(['blocked', 'enabled', 'favorites', 
   'blockedPageBgColor', 'enableConfirmMessage', 'enableReasonInput', 'enableUbButtonDisabling', 'ubDisableDuration', 
   'enableTimeInput', 'enableTempUnblocking', 'enableTempUbOptions', 'enableTempUbPopup', 'unblockDuration', 'saveBlockedUrls',
-  'focusOption', 'redirectUrl', 'message', 'enableNotiReblock',
+  'focusOption', 'redirectUrl', 'enableMessage', 'message', 'enableNotiReblock',
   'enableScriptures', 'requireVerse', 'allowUbReminder'], (data) => {
     const blocked = data.blocked || [];
     const enabled = data.enabled || [];
@@ -115,6 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
     blockUrlSelect.value = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : "reason";
     focusSelect.value = data.focusOption !== undefined ? data.focusOption : "close";
     redirectField.value = data.redirectUrl !== undefined ? data.redirectUrl : "";
+    displayMessage.checked = data.enableMessage !== undefined ? data.enableMessage : false;
     messageField.value = data.message !== undefined ? data.message : "You can do it! Stay focused!";
     notiReblock.checked = data.enableNotiReblock !== undefined ? data.enableNotiReblock : false;
     scriptures.checked = data.enableScriptures !== undefined ? data.enableScriptures : false;
@@ -159,6 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
   blockUrlSelect.addEventListener('change', saveOptions);
   focusSelect.addEventListener('change', toggleFocusField);
   document.getElementById("saveUrl").addEventListener('click', saveOptions);
+  displayMessage.addEventListener('click',updateCheckboxState);
   document.getElementById("saveMessage").addEventListener('click', saveOptions);
   document.getElementById("resetMessage").addEventListener('click', resetMessage);
   notiReblock.addEventListener('change',saveOptions);
@@ -191,20 +194,12 @@ document.addEventListener('DOMContentLoaded', () => {
     tempUbPopup.disabled = !tempUnblocking.checked ? true : false;
     ubEnableVerse.disabled = !scriptures.checked ? true : false;
     ubReminder.disabled = !scriptures.checked ? true : false;
+    messageField.disabled = !displayMessage.checked ? true : false;
     saveOptions();
   }
 
   function toggleFocusField() {
-    document.getElementById("redirectOptions").style.display = "none";
-    document.getElementById("messageOptions").style.display = "none";
-    switch(focusSelect.value) {
-      case "redirect":
-        document.getElementById("redirectOptions").style.display = "inline";
-        break;
-      case "message":
-        document.getElementById("messageOptions").style.display = "inline";
-        break;
-    }
+    document.getElementById("redirectOptions").style.display = focusSelect.value === "redirect" ? "inline" : "none";
     saveOptions();
   }
 
@@ -228,6 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveBlockedUrls = blockUrlSelect.value;
     const focusOption = focusSelect.value;
     const redirectUrl = redirectField.value;
+    const enableMessage = displayMessage.checked;
     const message = messageField.value;
     const enableNotiReblock = notiReblock.checked;
     const enableScriptures = scriptures.checked;
@@ -235,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const allowUbReminder = ubReminder.checked;
     chrome.storage.sync.set({ blockedPageBgColor, enableConfirmMessage, enableReasonInput, enableUbButtonDisabling, ubDisableDuration, 
       enableTimeInput, enableTempUnblocking, enableTempUbOptions, enableTempUbPopup, unblockDuration, saveBlockedUrls,
-      focusOption, redirectUrl, message, enableNotiReblock,
+      focusOption, redirectUrl, enableMessage, message, enableNotiReblock,
       enableScriptures, requireVerse, allowUbReminder });
   }
 
