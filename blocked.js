@@ -61,11 +61,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   let saveBlockedUrls = 'reason';
   let reason = '';
   let productiveSites = [];
-  let productiveUrls = document.getElementById('productiveUrls')
+  let productiveUrls = document.getElementById('productiveUrls');
+  let enableScriptures = false;
+  let verseHidden = false;
+  let book = 0;
+  let chapter = 0;
+  let verse = -1;
+  let nextButtonClicked = true;
+  let unblockButtonEnabled = true;
+  let clicksSinceEnabling = 0;
+  let allowUbReminder = true;
 
   chrome.storage.sync.get(['blockedPageBgColor', 'enableConfirmMessage', 'enableReasonInput', 'enableUbButtonDisabling', 'ubDisableDuration',
     'enableTempUnblocking', 'unblockDuration', 'enableTimeInput', 'saveBlockedUrls', 'productiveSites',
-    'enableScriptures', 'enableAutoAdvance', 'book', 'chapter', 'verse'], async (data) => {
+    'enableScriptures', 'requireVerse', 'allowUbReminder', 'book', 'chapter', 'verse'], async (data) => {
     enableConfirmMessage = data.enableConfirmMessage !== false;
     enableReasonInput = data.enableReasonInput || false;
     enableUbButtonDisabling = data.enableUbButtonDisabling || false;
@@ -76,6 +85,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     saveBlockedUrls = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : 'reason';
     document.body.style.backgroundColor = data.blockedPageBgColor !== undefined ? data.blockedPageBgColor : '#1E3A5F';
     productiveSites = data.productiveSites !== undefined ? data.productiveSites : [];
+    enableScriptures = data.enableScriptures || false;
+    requireVerse = data.requireVerse || false;
+    allowUbReminder = data.allowUbReminder !== false;
+    book = data.book || 0;
+    chapter = data.chapter || 0;
+    verse = data.verse || 0;
 
     const unblockEmoji = document.getElementById("unblockEmoji");
     if (enableTimeInput) {
@@ -92,8 +107,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (enableUbButtonDisabling) {
       // Disable the button and start the timer
       unblockButton.disabled = true;
+      unblockButtonEnabled = false;
       setTimeout(() => {
-        unblockButton.disabled = false;
+        unblockButtonEnabled = true;
+        checkUnblockAvailability();
       }, disableDuration * 1000); // Disable for `disableDuration` seconds
     }
 
@@ -159,7 +176,110 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
       }
     });
+    if(enableScriptures) {
+      document.getElementById("playback").style.display = "block";
+      displayVerse();
+      if(requireVerse) {
+        unblockButton.disabled = true;
+        nextButtonClicked = false;
+      }
+    }
   }, 100);
+
+  function checkUnblockAvailability() {
+    if (nextButtonClicked && unblockButtonEnabled) {
+      unblockButton.disabled = false;
+    } else {
+      unblockButton.disabled = true;
+    }
+  }
+
+  async function goToPreviousVerse() {
+    if (!enableScriptures) return;
+    const bom = await fetchData();
+  
+    // Check if we're on the first verse of the current chapter
+    if (verse === 0) {
+      // Move to the previous chapter
+      chapter--;
+      if (chapter < 0) {
+        // Move to the previous book
+        book--;
+        if (book < 0) {
+          // Wrap around to the last book if necessary
+          book = bom.length - 1;
+        }
+        // Wrap around to the last chapter of the previous book
+        chapter = bom[book].chapters.length - 1;
+      }
+      // Set verse to the last verse of the new chapter
+      verse = bom[book].chapters[chapter].verses.length - 1;
+    } else {
+      // Otherwise, simply move to the previous verse
+      verse--;
+    }
+  
+    await saveVerseData();
+    await displayVerse();
+  }  
+
+  async function goToNextVerse() {
+    if (!enableScriptures) return;
+    
+    if(!verseHidden) {
+      const bom = await fetchData();
+      verse++;
+
+      if (verse === bom[book].chapters[chapter].verses.length) {
+        chapter++;
+        if (chapter === bom[book].chapters.length) {
+          book++;
+          if (book === bom.length) {
+            book = 0
+          }
+          chapter = 0;
+        }
+        verse = 0;
+      }
+      await saveVerseData();
+    }
+    if(requireVerse) {
+      nextButtonClicked = true;
+      checkUnblockAvailability();
+    }
+    if(enableUbButtonDisabling && unblockButtonEnabled || !enableUbButtonDisabling)
+      clicksSinceEnabling++;
+    await displayVerse();
+  }
+
+  async function fetchData() {
+    try {
+      const response = await fetch(chrome.runtime.getURL('assets/book-of-mormon.json'));
+      const data = await response.json();
+      return data.books;
+    } catch (error) {
+      console.error('Error fetching chapter data:', error);
+    }
+  }
+
+  async function saveVerseData() {
+    chrome.storage.sync.set({ book, chapter, verse });
+  }
+
+  async function displayVerse() {
+    if(clicksSinceEnabling === 1 && (requireVerse || enableUbButtonDisabling) && allowUbReminder) {
+      document.getElementById('message').innerHTML = 'Unblock Button Available';
+      document.getElementById('verse').innerHTML = 'Hit the "Unblock Site" button to unblock site, or hit ⏩ to continue reading.';
+      verseHidden = true;
+    }
+    else {
+      const bom = await fetchData();
+      const verseData = bom[book].chapters[chapter].verses[verse];
+      document.getElementById('message').innerHTML = verseData.reference;
+      document.getElementById('verse').innerHTML = verseData.text;
+      verseHidden = false;
+    }
+  }
 
   function getDisplayText(pattern) {
     let displayText = pattern;
@@ -501,6 +621,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     } catch (error) {
       console.error('Error in seeUrlsButton:', error);
+    }
+  });
+  document.getElementById('previous').addEventListener('click', goToPreviousVerse);
+  document.getElementById('next').addEventListener('click', goToNextVerse);
+  document.addEventListener('keydown', async function(event) {
+    if (event.key === 'ArrowLeft') { // Left arrow key
+      await goToPreviousVerse();
+    } else if (event.key === 'ArrowRight') { // Right arrow key
+      await goToNextVerse();
     }
   });
 });
