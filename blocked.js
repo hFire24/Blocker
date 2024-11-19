@@ -453,7 +453,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if(data.enableMessage) {
         document.querySelector(".default-buttons").style.display = "none";
         document.querySelector(".confirm-message").style.display = "none";
-        document.querySelector(".playback").style.display = "none";
+        document.getElementById("playback").style.display = "none";
         document.querySelector(".message-buttons").style.display = "block";
         document.querySelector("p").innerHTML = "";
         document.getElementById("blockCountMessage").innerHTML = "";
