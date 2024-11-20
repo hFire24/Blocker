@@ -66,10 +66,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   let verseHidden = false;
   let book = 0;
   let chapter = 0;
-  let verse = -1;
-  let nextButtonClicked = true;
-  let unblockButtonEnabled = true;
-  let clicksSinceEnabling = 0;
+  let verse = 0;
+  let requireVerse = true;
+  let madeReadingProgress = true;
+  let readingProgress = 0;
+  let ubDisableDurationPassed = true;
+  let heyIHidTheVerse = false;
   let allowUbReminder = true;
 
   chrome.storage.sync.get(['blockedPageBgColor', 'enableConfirmMessage', 'enableReasonInput', 'enableUbButtonDisabling', 'ubDisableDuration',
@@ -91,12 +93,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     book = data.book || 0;
     chapter = data.chapter || 0;
     verse = data.verse || 0;
+    loadedBook = book;
+    loadedChapter = chapter;
+    loadedVerse = verse;
 
     const unblockEmoji = document.getElementById("unblockEmoji");
     if (enableTimeInput) {
       unblockEmoji.innerText = "⏳";
     } else {
       unblockEmoji.innerText = "🔓";
+      document.getElementById("backConfirmButton").style.display = "none";
     }
 
     if(!enableReasonInput) {
@@ -107,9 +113,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (enableUbButtonDisabling) {
       // Disable the button and start the timer
       unblockButton.disabled = true;
-      unblockButtonEnabled = false;
+      ubDisableDurationPassed = false;
       setTimeout(() => {
-        unblockButtonEnabled = true;
+        ubDisableDurationPassed = true;
         checkUnblockAvailability();
       }, disableDuration * 1000); // Disable for `disableDuration` seconds
     }
@@ -178,16 +184,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     if(enableScriptures) {
       document.getElementById("playback").style.display = "block";
-      displayVerse();
       if(requireVerse) {
         unblockButton.disabled = true;
-        nextButtonClicked = false;
+        madeReadingProgress = false;
       }
+      displayVerse(false);
     }
   }, 100);
 
   function checkUnblockAvailability() {
-    if (nextButtonClicked && unblockButtonEnabled) {
+    if (madeReadingProgress && ubDisableDurationPassed) {
       unblockButton.disabled = false;
     } else {
       unblockButton.disabled = true;
@@ -218,9 +224,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Otherwise, simply move to the previous verse
       verse--;
     }
+    readingProgress--;
   
+    if(!ubDisableDurationPassed && requireVerse)
+      madeReadingProgress = false;
+
     await saveVerseData();
-    await displayVerse();
+    await displayVerse(false);
   }  
 
   async function goToNextVerse() {
@@ -241,15 +251,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         verse = 0;
       }
+      readingProgress++;
       await saveVerseData();
     }
-    if(requireVerse) {
-      nextButtonClicked = true;
+    if(requireVerse && readingProgress > 0) {
+      madeReadingProgress = true;
       checkUnblockAvailability();
     }
-    if(enableUbButtonDisabling && unblockButtonEnabled || !enableUbButtonDisabling)
-      clicksSinceEnabling++;
-    await displayVerse();
+    await displayVerse(true);
   }
 
   async function fetchData() {
@@ -266,11 +275,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     chrome.storage.sync.set({ book, chapter, verse });
   }
 
-  async function displayVerse() {
-    if(clicksSinceEnabling === 1 && (requireVerse || enableUbButtonDisabling) && allowUbReminder) {
+  async function displayVerse(nextButtonClicked) {
+    if(madeReadingProgress && ubDisableDurationPassed && allowUbReminder && nextButtonClicked && !heyIHidTheVerse) {
       document.getElementById('message').innerHTML = 'Unblock Button Available';
       document.getElementById('verse').innerHTML = 'Hit the "Unblock Site" button to unblock site, or hit ⏩ to continue reading.';
       verseHidden = true;
+      heyIHidTheVerse = true;
+      unblockButton.disabled = false;
     }
     else {
       const bom = await fetchData();
@@ -564,9 +575,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       remainFocused();
     } catch (error) {
-      console.error('Error in showAskToSave:', error)
+      console.error('Error in remainFocused:', error)
     }
   });
+  document.getElementById('backConfirmButton').addEventListener('click', () => {
+    try {
+      showTimeInput(false);
+    } catch (error) {
+      console.error('Error in showTimeInput:', error);
+    }
+  })
   document.getElementById('editMessageButton').addEventListener('click', () => {
     try {
       let message = prompt("What would you like the message to say?");
