@@ -373,7 +373,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!enableConfirmMessage) {
       enableTimeInput ? await handleUnblockTime() : await unblockSite(duration, enableTempUnblocking);
     } else {
-      let confirmText = "Are you being distracted?";
+      let confirmText = "Are you sure you want to unblock this site";
+      confirmText += reason === "" ? "?" : ` for the following reason: "${reason}"?`;
+      let unblockTime = getUnblockingDuration();
+      document.getElementById("unblockTime").innerHTML = `You will be unblocking it for${unblockTime}.`
 
       document.getElementById('confirmText').innerText = confirmText;
       document.querySelector('.time-input').style.display = 'none';
