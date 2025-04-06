@@ -549,6 +549,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         duration = customDurationInput.value;
       } else if (duration === 'hours') {
         duration = parseInt(customDurationHrsInput.value) * 60 + parseInt(customDurationInput.value);
+      } else if (duration === '6AM') {
+        // Calculate the time until 6 AM tomorrow
+        const now = new Date();
+        const sixAM = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 6, 0, 0); // 6 AM tomorrow
+        const timeDiff = sixAM - now;
+        // Set duration to the time difference in minutes
+        duration = Math.floor(timeDiff / (1000 * 60));
       }
       if (duration === 'forever' || !isNaN(duration) && duration > 0 && duration <= 1440) {
         await showConfirmMessage();
