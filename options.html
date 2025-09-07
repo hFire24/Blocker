@@ -37,9 +37,7 @@
       cursor: pointer;
       width: 50px;
     }
-    .easy:hover {
-      background-color: #218838;
-    }
+    .easy:hover { background-color: #218838; }
     .hard {
       background-color: #dc3545; /* Red background for Hard mode */
       color: white;
@@ -48,17 +46,17 @@
       cursor: pointer;
       width: 50px;
     }
-    .hard:hover {
-      background-color: #c82333;
-    }
-
+    .hard:hover { background-color: #c82333; }
+    .answer-input { width: 100px; }
+    button:disabled { cursor: not-allowed; }
   </style>
 </head>
 <body>
   <h1>Website Blocker Options</h1>
 
   <div class="tab">
-    <button id="sitesTab" class="tablinks active" data-tab="Sites">Sites</button>
+    <button id="accessTab" class="tablinks active" data-tab="Access">Grant Access</button>
+    <button id="sitesTab" class="tablinks" data-tab="Sites" disabled>Sites</button>
     <button id="optionsTab" class="tablinks" data-tab="Options">Options</button>
     <button id="analyticsTab" class="tablinks" data-tab="Analytics">Analytics</button>
     <button id="savedUrlsTab" class="tablinks" data-tab="SavedUrls">Saved URLs</button>
@@ -67,7 +65,17 @@
     <button id="helpTab" class="tablinks" data-tab="Help">Help</button>
   </div>
 
-  <div id="Sites" class="tabcontent" style="display: block;">
+  <div id="Access" class="tabcontent" style="display: block;">
+    <h2>Grant Access</h2>
+    <div id="challengeSection">
+      <p>If you want to access the sites tab or import data, you will need to solve these math problems.</p>
+      <div id="mathProblems" style="font-size: 1rem;">
+      </div>
+      <button id="submitAnswer" style="margin-bottom:1rem;">Submit Answers</button>
+    </div>
+  </div>
+
+  <div id="Sites" class="tabcontent">
     <h2>Blocked Sites</h2>
     <div class="input-container">
       <input type="text" id="addUrlInput" placeholder="Enter URL or keyword">
@@ -217,7 +225,7 @@
 
   <div id="Export" class="tabcontent">
     <h2>Import/Export</h2>
-    <button id="importButton" style="margin-bottom:1rem;">Import Data</button> <input type="file" id="importFile" style="display: none;" />
+    <button id="importButton" style="margin-bottom:1rem;" disabled>Import Data</button> <input type="file" id="importFile" style="display: none;" />
     <button id="exportButton" style="margin-bottom:1rem;">Export Data</button>
   </div>
 

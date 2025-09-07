@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   // Tabs
+  const accessTab = document.getElementById('accessTab');
   const sitesTab = document.getElementById('sitesTab');
   const optionsTab = document.getElementById('optionsTab');
   const analyticsTab = document.getElementById('analyticsTab');
@@ -22,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Event listeners for tabs
+  accessTab.addEventListener('click', () => openTab('Access'));
   sitesTab.addEventListener('click', () => openTab('Sites'));
   optionsTab.addEventListener('click', () => openTab('Options'));
   analyticsTab.addEventListener('click', () => openTab('Analytics'));
@@ -45,8 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // Clear the openTab value
       chrome.storage.sync.remove('openTab');
     } else {
-      // Default to the Sites tab if no tab is specified
-      openTab('Sites');
+      // Default to the Access tab if no tab is specified
+      openTab('Access');
     }
   });
 
@@ -56,6 +58,10 @@ document.addEventListener('DOMContentLoaded', () => {
       loadSavedUrls();
     }
   });
+
+  const mathProblemsContainer = document.getElementById('mathProblems');
+  let numProblems = 1;
+  const correctAnswers = [];
 
   const blockedList = document.getElementById('blockedSitesList');
   const addUrlInput = document.getElementById('addUrlInput');
@@ -98,6 +104,52 @@ document.addEventListener('DOMContentLoaded', () => {
     const enabled = data.enabled || [];
     const favorites = data.favorites || [];
     const hardMode = data.hardMode || [];
+
+    const overlap = enabled.filter(site => hardMode.includes(site));
+    numProblems = overlap.length;
+
+    for(let i = 0; i < numProblems; i++) {
+      const problem = document.createElement('p');
+      problem.classList.add('math-problem');
+      problem.innerHTML = `Problem ${i + 1}: ${generateMathProblem()}`;
+      const answerInput = document.createElement('input');
+      answerInput.type = 'number';
+      answerInput.classList.add('answer-input');
+      problem.appendChild(answerInput);
+      mathProblemsContainer.appendChild(problem);
+    }
+
+    function generateMathProblem() {
+      const num1 = Math.floor(Math.random() * 900) + 100;
+      const num2 = Math.floor(Math.random() * 90) + 10;
+      const num3 = Math.floor(Math.random() * 9000) + 1000;
+      correctAnswers.push(num1 * num2 + num3);
+      return `${num1} × ${num2} + ${num3} = `;
+    }
+
+    function grantAccess(passed) {
+      document.getElementById('challengeSection').innerHTML = 
+      passed ? '<p style="color:green;">Access Granted! You can now access the sites tab or import data.</p>' : 
+      `<p>Normally, you would need to solve math problems to gain access to the sites tab,
+      but you already have access since you don't have any blocked sites on hard mode.</p>`;
+      document.getElementById('sitesTab').disabled = false;
+      document.getElementById('importButton').disabled = false;
+      openTab('Sites');
+    }
+
+    document.getElementById('submitAnswer').addEventListener('click', () => {
+      const answers = Array.from(document.getElementsByClassName('answer-input')).map(input => parseInt(input.value));
+      const allCorrect = answers.length === correctAnswers.length && answers.every((ans, idx) => ans === correctAnswers[idx]);
+      if (allCorrect) {
+        grantAccess(true);
+      } else {
+        alert('Some answers are incorrect. Please try again.');
+      }
+    });
+
+    if(numProblems === 0) {
+      grantAccess(false);
+    }
 
     blocked.forEach(item => {
       addItemToList(item, enabled.includes(item), favorites.includes(item), hardMode.includes(item));

@@ -6,51 +6,67 @@ document.addEventListener('DOMContentLoaded', () => {
   const blockedList = document.getElementById('blockedSitesList');
 
   // Load the current state of the blocker and favorited blocked items
-  chrome.storage.sync.get(['blockerEnabled', 'enabled', 'favorites'], (data) => {
+  chrome.storage.sync.get(['blockerEnabled', 'enabled', 'favorites', 'hardMode'], (data) => {
     const blockerEnabled = data.blockerEnabled !== false; // default to true if not set
     const enabled = data.enabled || [];
     const favorites = data.favorites || [];
+    const hardMode = data.hardMode || [];
     updateButton(blockerEnabled);
-    updateBlockedList(blockerEnabled, favorites, enabled);
+    updateBlockedList(blockerEnabled, favorites, enabled, hardMode);
   });
 
   toggleBlockerButton.addEventListener('click', () => {
-    chrome.storage.sync.get('blockerEnabled', (data) => {
-      const blockerEnabled = data.blockerEnabled !== false; // default to true if not set
-      chrome.storage.sync.set({ blockerEnabled: !blockerEnabled }, () => {
-        updateButton(!blockerEnabled);
-        chrome.storage.sync.get(['favorites', 'enabled'], (data) => {
-          updateBlockedList(!blockerEnabled, data.favorites || [], data.enabled || []);
-          console.log(blockerEnabled ? "BLOCKER DISABLED" : "BLOCKER ENABLED");
-          if(blockerEnabled) {
-            chrome.alarms.clearAll(() => {
-              chrome.storage.sync.get(null, (items) => {
-                let allKeys = Object.keys(items);
-                let keysToRemove = allKeys.filter(key => key.startsWith('reblock'));
-              
-                chrome.storage.sync.remove(keysToRemove, () => {
-                  if (chrome.runtime.lastError) {
-                    console.error(chrome.runtime.lastError);
-                  } else {
-                    console.log(`Removed keys: ${keysToRemove}`);
-                  }
-                });
-              });
-            });
-          } else if(!blockerEnabled) {
-            // Add back timers from an array. Go through each one and add timers. Drop the array when done.
-            chrome.storage.sync.get(['toTimestampWhenEnabled'], (data) => {
-              const toTimestampWhenEnabled = data.toTimestampWhenEnabled || [];
-              toTimestampWhenEnabled.forEach(item => {
-                chrome.storage.sync.set({ [`blockedTimestamp_${getDisplayText(item)}`]: Date.now() });
-              });
-            });
-            chrome.storage.sync.remove('toTimestampWhenEnabled');
-          }
-        });
-      });
+    chrome.storage.sync.get(['blockerEnabled', 'enabled', 'hardMode'], (data) => {
+      const blockerEnabled = data.blockerEnabled !== false;
+      const enabled = data.enabled || [];
+      const hardMode = data.hardMode || [];
+      const overlap = enabled.filter(site => hardMode.includes(site));
+      if (blockerEnabled && overlap.length > 0) {
+        launchDisableChallenge();
+      } else {
+        toggleBlockerState(blockerEnabled);
+      }
     });
   });
+
+  function launchDisableChallenge() {
+    window.open('challenge.html', '_blank');
+  }
+
+  function toggleBlockerState(blockerEnabled) {
+    chrome.storage.sync.set({ blockerEnabled: !blockerEnabled }, () => {
+      updateButton(!blockerEnabled);
+      chrome.storage.sync.get(['favorites', 'enabled', 'hardMode'], (data) => {
+        updateBlockedList(!blockerEnabled, data.favorites || [], data.enabled || [], data.hardMode || []);
+        console.log(blockerEnabled ? "BLOCKER DISABLED" : "BLOCKER ENABLED");
+        if(blockerEnabled) {
+          chrome.alarms.clearAll(() => {
+            chrome.storage.sync.get(null, (items) => {
+              let allKeys = Object.keys(items);
+              let keysToRemove = allKeys.filter(key => key.startsWith('reblock'));
+            
+              chrome.storage.sync.remove(keysToRemove, () => {
+                if (chrome.runtime.lastError) {
+                  console.error(chrome.runtime.lastError);
+                } else {
+                  console.log(`Removed keys: ${keysToRemove}`);
+                }
+              });
+            });
+          });
+        } else if(!blockerEnabled) {
+          // Add back timers from an array. Go through each one and add timers. Drop the array when done.
+          chrome.storage.sync.get(['toTimestampWhenEnabled'], (data) => {
+            const toTimestampWhenEnabled = data.toTimestampWhenEnabled || [];
+            toTimestampWhenEnabled.forEach(item => {
+              chrome.storage.sync.set({ [`blockedTimestamp_${getDisplayText(item)}`]: Date.now() });
+            });
+          });
+          chrome.storage.sync.remove('toTimestampWhenEnabled');
+        }
+      });
+    });
+  }
 
   openOptionsButton.addEventListener('click', () => {
     chrome.runtime.openOptionsPage();
@@ -65,11 +81,14 @@ document.addEventListener('DOMContentLoaded', () => {
     blockStatusHeading.textContent = blockerEnabled ? 'ENABLED' : 'DISABLED';
   }
 
-  function updateBlockedList(blockerEnabled, favorites, enabled) {
+  function updateBlockedList(blockerEnabled, favorites, enabled, hardMode) {
     blockedList.innerHTML = '';
     if (blockerEnabled) {
       blockedList.style.display = 'block';
       favorites.forEach(item => {
+        if (hardMode.includes(item)) {
+          return; // Skip items in hard mode
+        }
         const isEnabled = enabled.includes(item);
         addListItem(item, isEnabled);
       });
