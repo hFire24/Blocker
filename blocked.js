@@ -51,6 +51,25 @@ function setChromeStorage(data) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Helper to show/hide navigation and display scriptures button
+  function setScriptureNavigationVisibility(showNav, showDisplayBtn) {
+    document.getElementById('previous').style.display = showNav ? 'inline-block' : 'none';
+    document.getElementById('next').style.display = showNav ? 'inline-block' : 'none';
+    let displayBtn = document.getElementById('displayScripturesBtn');
+    if (!displayBtn) {
+      displayBtn = document.createElement('button');
+      displayBtn.id = 'displayScripturesBtn';
+      displayBtn.innerText = 'Display Scriptures';
+      displayBtn.style.margin = '10px';
+      displayBtn.style.display = 'none';
+      displayBtn.onclick = async function() {
+        setScriptureNavigationVisibility(true, false);
+        await displayVerse(false, true); // Show the verse when button is clicked
+      };
+      document.getElementById('playback').appendChild(displayBtn);
+    }
+    displayBtn.style.display = showDisplayBtn ? 'inline-block' : 'none';
+  }
   let enableConfirmMessage = true;
   let enableReasonInput = false;
   let enableUbButtonDisabling = false;
@@ -73,22 +92,43 @@ document.addEventListener('DOMContentLoaded', async () => {
   let ubDisableDurationPassed = true;
   let heyIHidTheVerse = false;
   let allowUbReminder = true;
+  let isHardMode = false;
+  let challengeCompleted = false;
 
   chrome.storage.sync.get(['blockedPageBgColor', 'enableConfirmMessage', 'enableReasonInput', 'enableUbButtonDisabling', 'ubDisableDuration',
     'enableTempUnblocking', 'unblockDuration', 'enableTimeInput', 'saveBlockedUrls', 'productiveSites',
-    'enableScriptures', 'requireVerse', 'allowUbReminder', 'book', 'chapter', 'verse'], async (data) => {
-    enableConfirmMessage = data.enableConfirmMessage !== false;
-    enableReasonInput = data.enableReasonInput || false;
-    enableUbButtonDisabling = data.enableUbButtonDisabling || false;
+    'enableScriptures', 'requireVerse', 'allowUbReminder', 'book', 'chapter', 'verse',
+    'hardMode', 'enabled', 'lastBlockedUrl'], async (data) => {
+
+    const hardModeSites = data.hardMode || [];
+    const enabledSites = data.enabled || [];
+    const lastBlockedUrl = data.lastBlockedUrl || "";
+    if (lastBlockedUrl) {
+      const matchedPatterns = enabledSites.filter(pattern =>
+        new RegExp(pattern).test(lastBlockedUrl.toLowerCase())
+      );
+      if (matchedPatterns.some(p => hardModeSites.includes(p))) {
+        isHardMode = true;
+      }
+    }
+
+    if (isHardMode) {
+      document.getElementById("message").innerText = "Access Denied";
+      document.getElementById("verse").innerHTML = `You are <i>not</i> going to that website. It reinforces unhealthy behavioral patterns that should be avoided.`;
+    }
+      
+    enableConfirmMessage = isHardMode ? true : data.enableConfirmMessage !== false;
+    enableReasonInput = isHardMode ? true : data.enableReasonInput || false;
+    enableUbButtonDisabling = isHardMode ? false : data.enableUbButtonDisabling || false;
     disableDuration = (!isNaN(data.ubDisableDuration) && data.ubDisableDuration > 0 && data.ubDisableDuration <= 300) ? parseInt(data.ubDisableDuration, 10) : 15;
-    enableTimeInput = data.enableTimeInput || false;
-    enableTempUnblocking = data.enableTempUnblocking !== false;
-    duration = (!isNaN(data.unblockDuration) && data.unblockDuration > 0 && data.unblockDuration <= 1440) ? parseInt(data.unblockDuration, 10) : 5;
+    enableTimeInput = isHardMode ? true : data.enableTimeInput || false;
+    enableTempUnblocking = isHardMode ? true : data.enableTempUnblocking !== false;
+    duration = isHardMode ? 5 : (!isNaN(data.unblockDuration) && data.unblockDuration > 0 && data.unblockDuration <= 1440) ? parseInt(data.unblockDuration, 10) : 5;
     saveBlockedUrls = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : 'reason';
-    document.body.style.backgroundColor = data.blockedPageBgColor !== undefined ? data.blockedPageBgColor : '#1E3A5F';
+    document.body.style.backgroundColor = isHardMode ? "#70101E" : (data.blockedPageBgColor !== undefined ? data.blockedPageBgColor : '#1E3A5F');
     productiveSites = data.productiveSites !== undefined ? data.productiveSites : [];
     enableScriptures = data.enableScriptures || false;
-    requireVerse = data.requireVerse || false;
+    requireVerse = (isHardMode && enableScriptures) ? true : data.requireVerse || false;
     allowUbReminder = data.allowUbReminder !== false;
     book = data.book || 0;
     chapter = data.chapter || 0;
@@ -98,7 +138,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadedVerse = verse;
 
     const unblockEmoji = document.getElementById("unblockEmoji");
-    if (enableTimeInput) {
+    if (isHardMode) {
+      unblockEmoji.innerText = "🏁";
+      document.getElementById("unblockText").innerText = "Unblock Challenge";
+    }
+    else if (enableTimeInput) {
       unblockEmoji.innerText = "⏳";
     } else {
       unblockEmoji.innerText = "🔓";
@@ -136,11 +180,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const enabledSites = data.enabled || [];
       const blockCountMessage = document.getElementById('blockCountMessage');
       blockCountMessage.innerHTML = '';
-    
       if (blockCount) {
         const blockEntries = Object.entries(blockCount);
-    
-        // Display only the enabled sites that are currently blocked
         const blockMessages = blockEntries
           .filter(([pattern]) => enabledSites.includes(pattern))
           .map(([pattern, count]) => {
@@ -148,7 +189,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const times = (count === 1) ? 'time' : 'times';
             return `<b>${displayText}</b> ${count} ${times}`;
           });
-    
         let joinedMessages;
         if (blockMessages.length > 2) {
           const lastMessage = blockMessages.pop();
@@ -159,17 +199,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
           joinedMessages = blockMessages.join('');
         }
-    
         const p = document.createElement('p');
         p.innerHTML = `Website Blocker has blocked ${joinedMessages} today.`;
         blockCountMessage.appendChild(p);
       }
     });
-    
     chrome.storage.sync.get('lastBlockedUrl', (data) => {
       const lastBlockedUrl = data.lastBlockedUrl;
       if (lastBlockedUrl) {
-        //document.getElementById("url").innerHTML = lastBlockedUrl.includes('&') ? lastBlockedUrl.slice(0, lastBlockedUrl.indexOf('&')) : lastBlockedUrl;
         chrome.storage.sync.get(null, (data) => {
           const enabled = data.enabled || [];
           const matchedPatterns = enabled.filter(pattern => new RegExp(pattern).test(lastBlockedUrl.toLowerCase()));
@@ -182,13 +219,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
       }
     });
+    // Now run scripture logic
     if(enableScriptures) {
       document.getElementById("playback").style.display = "block";
       if(requireVerse) {
         unblockButton.disabled = true;
         madeReadingProgress = false;
       }
-      displayVerse(false);
+      if (!isHardMode) {
+        setScriptureNavigationVisibility(true, false);
+        displayVerse(false, false);
+      } else {
+        setScriptureNavigationVisibility(false, true);
+      }
     }
   }, 100);
 
@@ -230,7 +273,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       madeReadingProgress = false;
 
     await saveVerseData();
-    await displayVerse(false);
+    await displayVerse(false, true);
   }  
 
   async function goToNextVerse() {
@@ -258,7 +301,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       madeReadingProgress = true;
       checkUnblockAvailability();
     }
-    await displayVerse(true);
+    await displayVerse(true, false);
   }
 
   async function fetchData() {
@@ -275,15 +318,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     chrome.storage.sync.set({ book, chapter, verse });
   }
 
-  async function displayVerse(nextButtonClicked) {
-    if(madeReadingProgress && ubDisableDurationPassed && allowUbReminder && nextButtonClicked && !heyIHidTheVerse) {
+  async function displayVerse(nextButtonClicked, prevButtonClicked) {
+    if (isHardMode && !nextButtonClicked && !prevButtonClicked) {
+      // In hard mode, hide the verse until Display Scriptures button is pressed
+      verseHidden = true;
+    } else if(madeReadingProgress && ubDisableDurationPassed && allowUbReminder && nextButtonClicked && !heyIHidTheVerse) {
       document.getElementById('message').innerHTML = 'Unblock Button Available';
-      document.getElementById('verse').innerHTML = 'Hit the "Unblock Site" button to unblock site, or hit ⏩ to continue reading.';
+      let displayText = isHardMode ? "\"Unblock Challenge\" button to do a challenge" : "\"Unblock Site\" button to unblock the site";
+      document.getElementById('verse').innerHTML = `Hit the ${displayText}, or hit ⏩ to continue reading.`;
       verseHidden = true;
       heyIHidTheVerse = true;
       unblockButton.disabled = false;
-    }
-    else {
+    } else {
       const bom = await fetchData();
       const verseData = bom[book].chapters[chapter].verses[verse];
       document.getElementById('message').innerHTML = verseData.reference;
@@ -381,7 +427,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('confirmText').innerText = confirmText;
       document.querySelector('.time-input').style.display = 'none';
       document.querySelector('.default-buttons').style.display = 'none';
+      document.querySelector('.challenge').style.display = 'none';
       document.querySelector('.confirm-message').style.display = 'block';
+      if (isHardMode) {
+        document.getElementById("hardModeWarning").style.display = "block";
+      }
     }
   }
 
@@ -423,6 +473,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelector('.default-buttons').style.display = 'block';
   }
 
+  function showChallenge() {
+    document.querySelector('.default-buttons').style.display = 'none';
+    document.querySelector('.confirm-message').style.display = 'none';
+    document.querySelector('.challenge').style.display = 'block';
+
+    const challengeText = quotes[Math.floor(Math.random() * quotes.length)];
+    const challengeQuestionElem = document.getElementById("challengeQuestion");
+    const challengeQuote = challengeText.quote
+      .replace(/—|–/g, ', ')
+      .replace(/…/g, '...')
+      .replace(/[“”]/g, '"');
+    challengeQuestionElem.innerText = challengeQuote;
+    challengeQuestionElem.title = "Quote from " + (challengeText.author ? challengeText.author : "the developer, me!");
+
+    const answerField = document.getElementById("challengeAnswer");
+    answerField.onpaste = (e) => e.preventDefault();    // Prevent pasting
+    answerField.ondragover = (e) => e.preventDefault(); // Prevent drag-over highlight
+    answerField.ondrop = (e) => e.preventDefault();     // Prevent dropped content
+  }
+
   const durationSelect = document.getElementById('unblockDuration');
   const customDurationInput = document.getElementById('customDuration');
   const customDurationHrsInput = document.getElementById('customDurationHrs');
@@ -435,6 +505,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       document.querySelector('.default-buttons').style.display = 'none';
       document.querySelector('.confirm-message').style.display = 'none';
+      document.querySelector('.challenge').style.display = 'none';
       document.querySelector('.time-input').style.display = 'block';
     }
   }
@@ -464,15 +535,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function remainFocused() {
     chrome.storage.sync.get(['focusOption', 'redirectUrl', 'enableMessage', 'message'], (data) => {
-      if(data.enableMessage) {
+      if(data.enableMessage || isHardMode) {
         document.querySelector(".default-buttons").style.display = "none";
         document.querySelector(".confirm-message").style.display = "none";
         document.getElementById("playback").style.display = "none";
         document.querySelector(".message-buttons").style.display = "block";
-        document.querySelector("p").innerHTML = "";
+        document.querySelector("p").innerHTML = isHardMode ? "You win this battle one decision at a time. Don’t forget that." : "";
         document.getElementById("blockCountMessage").innerHTML = "";
         document.getElementById("durationText").innerHTML = "";
-        document.getElementById("message").innerHTML = data.message !== undefined ? data.message : "You can do it! Stay focused!";
+        document.getElementById("message").innerHTML = isHardMode ? "Good. You made the right choice." : 
+        data.message !== undefined ? data.message : "You can do it! Stay focused!";
       } else if (data.focusOption === "redirect") {
         window.location.href = data.redirectUrl;
       } else {
@@ -499,7 +571,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('unblockButton').addEventListener('click', async () => {
     try {
-      await showTimeInput(true);
+      await isHardMode && !challengeCompleted ? showChallenge() : showTimeInput(true);
     } catch (error) {
       console.error('Error in unblock:', error);
     }
@@ -516,6 +588,39 @@ document.addEventListener('DOMContentLoaded', async () => {
       remainFocused();
     } catch (error) {
       console.error('Error in focusButton:', error);
+    }
+  });
+  document.getElementById('submitChallengeButton').addEventListener('click', async () => {
+    try {
+      if (challengeCompleted) {
+        await showTimeInput(true);
+        return;
+      }
+      const userAnswer = document.getElementById("challengeAnswer").value.trim();
+      const challengeText = document.getElementById("challengeQuestion").innerText.replace(/’/g, "'");
+      console.log(userAnswer);
+      console.log(challengeText);
+      const feedbackElem = document.getElementById("challengeFeedback");
+      if (userAnswer !== challengeText) {
+        feedbackElem.innerText = "That doesn't match. Please try again.";
+        return;
+      }
+      challengeCompleted = true;
+      document.getElementById("unblockEmoji").innerText = "⏳";
+      document.getElementById("unblockText").innerText = "Unblock Site";
+      document.getElementById("challengeFeedback").innerText = "Challenge completed. You may unblock the site.";
+      if (enableScriptures) {
+        document.getElementById("challengeFeedback").innerText += "\nBut, did you think to pray?";
+      }
+      document.getElementById("submitChallengeButton").innerText = "⏳ Unblock Site";
+      document.getElementById("challengeAnswer").value = "";
+      document.getElementById("challengeInput").style.display = "none";
+      const challengeQuestionElem = document.getElementById("challengeQuestion");
+      let authorText = challengeQuestionElem.title.replace(/^Quote from /, '');
+      if (authorText === "the developer, me!") authorText = "The developer, me!";
+      challengeQuestionElem.innerText += ` – ${authorText}`;
+    } catch (error) {
+      console.error('Error in submitChallengeButton:', error);
     }
   });
   document.getElementById('unblockDuration').addEventListener('change', (event) => {

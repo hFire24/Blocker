@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
   chrome.storage.sync.remove('enableAutoAdvance');
 
   // Load blocked items from storage
-  chrome.storage.sync.get(['blocked', 'enabled', 'favorites', 
+  chrome.storage.sync.get(['blocked', 'enabled', 'favorites', 'hardMode',
   'blockedPageBgColor', 'enableConfirmMessage', 'enableReasonInput', 'enableUbButtonDisabling', 'ubDisableDuration', 
   'enableTimeInput', 'enableTempUnblocking', 'enableTempUbOptions', 'enableTempUbPopup', 'unblockDuration', 'saveBlockedUrls',
   'focusOption', 'redirectUrl', 'enableMessage', 'message', 'enableNotiReblock',
@@ -97,9 +97,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const blocked = data.blocked || [];
     const enabled = data.enabled || [];
     const favorites = data.favorites || [];
+    const hardMode = data.hardMode || [];
 
     blocked.forEach(item => {
-      addItemToList(item, enabled.includes(item), favorites.includes(item));
+      addItemToList(item, enabled.includes(item), favorites.includes(item), hardMode.includes(item));
     });
 
     // Set blocking options
@@ -135,14 +136,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function updateBlockedList() {
-    chrome.storage.sync.get(['blocked', 'enabled', 'favorites'], (data) => {
+    chrome.storage.sync.get(['blocked', 'enabled', 'favorites', 'hardMode'], (data) => {
       blockedList.innerHTML = '';
       const blocked = data.blocked || [];
       const enabled = data.enabled || [];
       const favorites = data.favorites || [];
+      const hardMode = data.hardMode || [];
 
       blocked.forEach(item => {
-        addItemToList(item, enabled.includes(item), favorites.includes(item));
+        addItemToList(item, enabled.includes(item), favorites.includes(item), hardMode.includes(item));
       });
     });
   }
@@ -309,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return displayText;
   }
 
-  function addItemToList(pattern, isEnabled, isFavorite) {
+  function addItemToList(pattern, isEnabled, isFavorite, hardMode) {
     const listItem = document.createElement('li');
     listItem.draggable = true;
 
@@ -340,6 +342,13 @@ document.addEventListener('DOMContentLoaded', () => {
       toggleItem(pattern, checkbox.checked, itemText);
     });
 
+    const hardModeButton = document.createElement('button');
+    hardModeButton.textContent = hardMode ? 'Hard' : 'Easy';
+    hardModeButton.className = hardMode ? 'hard' : 'easy';
+    hardModeButton.addEventListener('click', () => {
+      toggleHardMode(pattern, hardModeButton);
+    });
+
     const editButton = document.createElement('button');
     editButton.textContent = 'Edit';
     editButton.addEventListener('click', () => {
@@ -356,6 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
     listItem.appendChild(favoriteButton);
     listItem.appendChild(checkbox);
     listItem.appendChild(itemText);
+    listItem.appendChild(hardModeButton);
     listItem.appendChild(editButton);
     listItem.appendChild(deleteButton);
 
@@ -382,6 +392,22 @@ document.addEventListener('DOMContentLoaded', () => {
         button.textContent = '☆';
       }
       chrome.storage.sync.set({ favorites });
+    });
+  }
+
+  function toggleHardMode(pattern, button) {
+    chrome.storage.sync.get(['hardMode'], (data) => {
+      let hardMode = data.hardMode || [];
+      if (!hardMode.includes(pattern)) {
+        hardMode.push(pattern);
+        button.textContent = 'Hard';
+        button.className = 'hard';
+      } else {
+        hardMode = hardMode.filter(item => item !== pattern);
+        button.textContent = 'Easy';
+        button.className = 'easy';
+      }
+      chrome.storage.sync.set({ hardMode });
     });
   }
 
@@ -548,11 +574,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function deleteItem(pattern, listItem) {
     if (confirm("Are you sure you want to delete this item?")) {
-      chrome.storage.sync.get(['blocked', 'enabled', 'favorites'], (data) => {
+      chrome.storage.sync.get(['blocked', 'enabled', 'favorites', 'hardMode'], (data) => {
         const blocked = data.blocked.filter(item => item !== pattern);
         const enabled = data.enabled.filter(item => item !== pattern);
         const favorites = data.favorites.filter(item => item !== pattern);
-        chrome.storage.sync.set({ blocked, enabled, favorites }, () => {
+        const hardMode = data.hardMode.filter(item => item !== pattern);
+        chrome.storage.sync.set({ blocked, enabled, favorites, hardMode }, () => {
           listItem.remove();
           chrome.storage.sync.remove(`blockedTimestamp_${getDisplayText(pattern)}`);
           const alarmName = `reblock_${getDisplayText(pattern)}`;
@@ -605,9 +632,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function handleDragEnd() {
     this.style.opacity = '1';
     draggedItem = null;
-
-    // Save the new order after drag ends
-    saveProductiveSites();
   }
 
   function updateBlockedOrder() {

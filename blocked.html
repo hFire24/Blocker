@@ -13,7 +13,7 @@
       font-family: Arial, sans-serif;
       background-color: #1E3A5F;
     }
-    #verse {
+    #verse, #challengeQuestion, #hardModeWarning p {
       max-width: 683px;
     }
     .blocked-message {
@@ -88,7 +88,8 @@
     .default-buttons,
     .confirm-message,
     .time-input,
-    .message-buttons {
+    .message-buttons,
+    .challenge {
       display: none;
       margin-top: 20px;
       color: white;
@@ -116,6 +117,12 @@
     #productiveUrls a:hover {
       color: #CCC;
     }
+    h2 {
+      font-size: 1.3rem;
+    }
+    h3 {
+      font-size: 1.1rem;
+    }
     @media only screen and (max-width: 505px) {
       .blocked-message {
         text-align: center;
@@ -138,9 +145,18 @@
     </div>
     <div class="default-buttons">
       <h2>What do you want to do now?</h2>
-      <button id="unblockButton" class="unblock-button"><span id="unblockEmoji">🔓</span> Unblock Site</button>
+      <button id="unblockButton" class="unblock-button"><span id="unblockEmoji">🔓</span> <span id="unblockText">Unblock Site</span></button>
       <button id="reasonButton" class="confirm-unblock-button">📝 Give Reason</button>
       <button id="focusButton" disabled class="focus-button">🔒 Remain Focused</button>
+    </div>
+    <div class="challenge">
+      <h2>To unblock the site, type the following quote exactly as shown:</h2>
+      <p id="challengeQuestion"></p>
+      <div id="challengeInput" style="display: flex; justify-content: center; margin-bottom: 16px;">
+        <textarea id="challengeAnswer" placeholder="Start typing here..." rows="4" cols="70" style="display: block;"></textarea>
+      </div>
+      <button id="submitChallengeButton" class="confirm-unblock-button">Submit Answer</button>
+      <p id="challengeFeedback" style="color: yellow; margin-top: 10px;"></p>
     </div>
     <div class="time-input">
       <h2>How long should this website be unblocked for?</h2>
@@ -169,7 +185,15 @@
     </div>
     <div class="confirm-message">
       <h2 id="confirmText"></h2>
-      <p id="unblockTime"></p>
+      <div id="hardModeWarning" style="display: none;">
+        <h3>FINAL NOTE:</h3>
+        <p>Anime girls are not your friends. They are not comfort. They are not rest.
+        They are the screen you hide behind when you're afraid to live your own story.
+        And every minute you stare at them is a minute you don’t get back.
+        </p>
+        <p>Are you sure you want to proceed?</p>
+      </div>
+      <p id="unblockTime"></p>      
       <button id="confirmUnblockButton" class="confirm-unblock-button">🔓 Yes, Unblock Site</button>
       <button id="backConfirmButton" class="submit-reason-button">⏳ No, Adjust Time</button>
       <button id="cancelUnblockButton" class="focus-button">🔒 No, Block Site</button>
@@ -186,5 +210,6 @@
     </div>
   </div>
   <script src="blocked.js"></script>
+  <script src="quotes.js"></script>
 </body>
 </html>
