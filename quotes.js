@@ -2,7 +2,7 @@
 const lazQuotes = [//My own quotes 1-3
 "Don't let the lazy part of you define your lifestyle.",
 "Given the huge amount of creature comforts available today, it's so difficult to resist laziness.",
-"Don't be like Anzu Futaba.",
+"Don't be like Anzu Futaba. Her end goal is laziness, which is not good.",
 //Quotes for lazy 1-10
 '“Inspiration is a guest that does not willingly visit the lazy.” – Tchaikovsky',
 '“Laziness is a secret ingredient that goes into failure. But it’s only kept a secret from the person who fails.” – Robert Half',
@@ -65,23 +65,23 @@ const lazQuotes = [//My own quotes 1-3
 const motQuotes = [//My own quotes 1-10
 "Make your future brighter! Don't walk on the path of darkness!",
 "Get important things done! You will feel a sense of accomplishment!",
-"You are stronger than you think.",
-"You are capable of doing great things.",
+"You are capable of doing great things and are stronger than you think.",
 "I know you can become a better person! Just don't rush it.",
 "Freedom is not being dictated by your urges. Show those urges who's boss.",
 "Life is a game. Know the rules. Use strategies, and you'll win.",
 "When you get things done, you feel happy and accomplished!",
 "You are a really good person. Did you know that?",
 "If you keep doing great things, you'll get your dream car!",
-//My own quotes 11-17
 "Win a million dollars! It's harder to do than earning $1000000.",
+//My own quotes 11-16
 "The road to productivity. Take it, and you'll be successful.",
 "Be a productive human being! Do something good!",
 //"Make John Purdue proud! Be a <u>successful</u> student!",
-"Make your mama proud! Be a <u>successful</u> worker!",
+"Make your mama proud! Be a successful worker!",
 "What will it take for you to become successful? Imagine the iceberg of success.",
 "Would you rather live in a large house with a rich and happy life with people who love you? Or would you rather live all alone, poor and miserable, with nobody to support you? Your choices determine the consequences.",
-"There are so many legitimate opportunities to make lots of money online.",
+"There are so many legitimate opportunities to make lots of money online. Tech With Tim has some fantastic advice.",
+"Remember 2024? You finished projects, briefly got back into self-help, created this extension, and visited your childhood city. You've accomplished so much and made fantastic progress that year.",
 //Motivational quotes 1-10
 '“If you want to achieve greatness stop asking for permission.” – Anonymous',
 '“Things work out best for those who make the best of how things work out.” – John Wooden',
@@ -285,7 +285,25 @@ const procrastQuotes = [//Anti-procrastination quotes 1-10 from https://web.arch
 '“Anyone can do any amount of work, provided it isn’t the work he is supposed to be doing at that moment” – Robert Benchley',
 '“Whatever you want to do, do it now! There are only so many tomorrows.” – Michael Landon',
 //Additional anti-procrastination quote
-'“The penalty for procrastination is the loss of hopes and dreams.” – Tai Lopez'];
+'“The penalty for procrastination is the loss of hopes and dreams.” – Tai Lopez',
+'“Inspiration exists, but it has to find you working.” – Pablo Picasso'
+];
+
+const mindfulQuotes = [
+  //Mindfulness quotes 1-10
+  '“The mind is everything. What you think you become.” – Buddha',
+  '“Do not dwell in the past, do not dream of the future, concentrate the mind on the present moment.” – Buddha',
+  "“Feelings come and go like clouds in a windy sky. Conscious breathing is my anchor.” – Thich Nhat Hanh",
+  '“Mindfulness is the aware, balanced acceptance of the present experience. It isn’t more complicated than that. It is opening to or receiving the present moment, pleasant or unpleasant, just as it is, without either clinging to it or rejecting it.” – Tara Brach',
+  '“The best way to capture moments is to pay attention. This is how we cultivate mindfulness.” – Jon Kabat-Zinn',
+  "“Mindfulness refers to keeping one's consciousness alive to the present reality. It is the miracle by which we master and restore ourselves.” – Thich Nhat Hanh",
+  "“If you do not change direction, you may end up where you are heading.” – Lao Tzu",
+  "“You yourself, as much as anybody in the entire universe, deserve your love and affection.” – Buddha",
+  "“Nothing is a waste of time if you use the experience wisely.” – Auguste Rodin",
+  "You are the sky. Everything else – it’s just the weather.” – Pema Chödrön",
+  //Mindfulness quotes 11-20
+  '“The present moment is filled with joy and happiness. If you are attentive, you will see it.” – Thich Nhat Hanh',
+];
 
 function parseQuote(str) {
   // Match: “quote” – author

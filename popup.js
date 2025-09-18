@@ -86,8 +86,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (blockerEnabled) {
       blockedList.style.display = 'block';
       favorites.forEach(item => {
-        if (hardMode.includes(item)) {
-          return; // Skip items in hard mode
+        if (hardMode.includes(item) && enabled.includes(item)) {
+          return; // Skip enabled items in hard mode
         }
         const isEnabled = enabled.includes(item);
         addListItem(item, isEnabled);

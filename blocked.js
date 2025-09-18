@@ -231,6 +231,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         displayVerse(false, false);
       } else {
         setScriptureNavigationVisibility(false, true);
+        document.getElementById('unblockButton').title = "Read a scripture verse to unlock the challenge";
       }
     }
   }, 100);
