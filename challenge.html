@@ -36,16 +36,36 @@
       width: 100px;
       font-size: 1rem;
     }
-    .confirm-unblock-button {
+    button {
       padding: 10px 20px;
       font-size: 1rem;
       color: #ffffff;
       border: none;
       cursor: pointer;
+    }
+    .confirm-unblock-button {
       background-color: #007bff; /* Blue background for the confirm button */
     }
     .confirm-unblock-button:hover {
       background-color: #0056b3;
+    }
+    .focus-button {
+      background-color: #dc3545; /* Red background for the remain focused button */
+    }
+    .focus-button:hover {
+      cursor: pointer;
+      background-color: #c82333;
+    }
+    #productiveSites {
+      font-size: 1rem;
+      margin-bottom: 12px;
+    }
+    #productiveSites a, #productiveSites a:visited {
+      color: white;
+      margin-right: 20px;
+    }
+    #productiveSites a:hover {
+      color: #CCC;
     }
     @media only screen and (max-width: 505px) {
       .challenge-box {
@@ -65,9 +85,22 @@
     <p>Tip: You may use a calculator.</p>
     <div id="mathProblems">
     </div>
-    <button class="confirm-unblock-button" id="confirmUnblockButton">Submit Answers</button>
+    <button class="confirm-unblock-button" id="confirmUnblockButton">✅ Submit Answers</button>
+    <button id="focusButton" class="focus-button">🔒 Remain Focused</button>
   </div>
-
+  <div class="closing-box" style="display:none;">
+    <h1>Good. You made the right choice.</h1>
+    <p>You win this battle one decision at a time. Don’t forget that.</p>
+    <h2>Productive Sites</h2>
+    <div id="productiveSites">
+      <a href="https://www.khanacademy.org" target="_blank">Khan Academy</a>
+      <a href="https://www.coursera.org" target="_blank">Coursera</a>
+      <a href="https://www.edx.org" target="_blank">edX</a>
+      <a href="https://www.codecademy.com" target="_blank">Codecademy</a>
+      <a href="https://www.duolingo.com" target="_blank">Duolingo</a>
+    </div>
+    <button class="focus-button" id="closeButton">Close</button>
+  </div>
   <script src="challenge.js"></script>
 </body>
 </html>

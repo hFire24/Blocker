@@ -164,12 +164,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       }, disableDuration * 1000); // Disable for `disableDuration` seconds
     }
 
-    await productiveSites.forEach(site => {
-      let a = document.createElement("a");
-      a.href = site.url;
-      a.innerHTML = site.name;
-      productiveUrls.appendChild(a);
-    });
+    if(productiveSites.length > 0) {
+      productiveUrls.innerHTML = '';
+      await productiveSites.forEach(site => {
+        let a = document.createElement("a");
+        a.href = site.url;
+        a.innerHTML = site.name;
+        productiveUrls.appendChild(a);
+      });
+    }
 
     document.getElementById("focusButton").disabled = false;
   });
@@ -539,6 +542,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if(data.enableMessage || isHardMode) {
         document.querySelector(".default-buttons").style.display = "none";
         document.querySelector(".confirm-message").style.display = "none";
+        document.querySelector(".challenge").style.display = "none";
         document.getElementById("playback").style.display = "none";
         document.querySelector(".message-buttons").style.display = "block";
         document.querySelector("p").innerHTML = isHardMode ? "You win this battle one decision at a time. Don’t forget that." : "";
@@ -620,6 +624,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       let authorText = challengeQuestionElem.title.replace(/^Quote from /, '');
       if (authorText === "the developer, me!") authorText = "The developer, me!";
       challengeQuestionElem.innerText += ` – ${authorText}`;
+      const focusBtn = document.createElement('button');
+      focusBtn.id = 'challengeFocusButton';
+      focusBtn.className = 'focus-button';
+      focusBtn.innerText = '🔒 Remain Focused';
+      focusBtn.onclick = () => {
+        try {
+          remainFocused();
+        } catch (error) {
+          console.error('Error in focusButton:', error);
+        }
+      };
+      document.getElementById('submitChallengeButton').after(focusBtn);
     } catch (error) {
       console.error('Error in submitChallengeButton:', error);
     }

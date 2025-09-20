@@ -39,3 +39,26 @@ document.getElementById('confirmUnblockButton').addEventListener('click', () => 
     alert('Some answers are incorrect. Please try again.');
   }
 });
+document.getElementById('focusButton').addEventListener('click', () => {
+  document.querySelector('.challenge-box').style.display = 'none';
+  document.querySelector('.closing-box').style.display = 'block';
+  chrome.storage.sync.get(['productiveSites'], (data) => {
+    const productiveSites = data.productiveSites || [];
+    const container = document.getElementById('productiveSites');
+    if(productiveSites.length > 0) {
+      container.innerHTML = '';
+      productiveSites.forEach(site => {
+        const link = document.createElement('a');
+        link.href = site.url;
+        link.textContent = site.name;
+        container.appendChild(link);
+      });
+    }
+  });
+});
+
+document.getElementById('closeButton').addEventListener('click', () => {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    chrome.tabs.remove(tabs[0].id);
+  });
+});
