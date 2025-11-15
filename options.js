@@ -1,4 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // Helper function to check if it's night time (9PM-4AM)
+  function isNightTime() {
+    const now = new Date();
+    const currentHour = now.getHours();
+    return currentHour >= 21 || currentHour < 4;
+  }
+
   // Tabs
   const accessTab = document.getElementById('accessTab');
   const sitesTab = document.getElementById('sitesTab');
@@ -77,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const disableDuration = document.getElementById('ubDisableDuration');
   const timeInput = document.getElementById('enableTimeInput');
   const tempUnblocking = document.getElementById('enableTempUnblocking');
+  const nightMode = document.getElementById('enableNightMode');
   const tempUbOptions = document.getElementById('enableTempUbOptions');
   const tempUbPopup = document.getElementById('enableTempUbPopup');
   const ubDuration = document.getElementById('ubDuration');
@@ -95,15 +103,16 @@ document.addEventListener('DOMContentLoaded', () => {
   chrome.storage.sync.remove('enableAutoAdvance');
 
   // Load blocked items from storage
-  chrome.storage.sync.get(['blocked', 'enabled', 'favorites', 'hardMode',
+  chrome.storage.sync.get(['blocked', 'enabled', 'favorites', 'hardMode', 'blockerEnabled',
   'blockedPageBgColor', 'enableConfirmMessage', 'enableReasonInput', 'enableUbButtonDisabling', 'ubDisableDuration', 
-  'enableTimeInput', 'enableTempUnblocking', 'enableTempUbOptions', 'enableTempUbPopup', 'unblockDuration', 'saveBlockedUrls',
+  'enableTimeInput', 'enableTempUnblocking', 'enableNightMode', 'enableTempUbOptions', 'enableTempUbPopup', 'unblockDuration', 'saveBlockedUrls',
   'focusOption', 'redirectUrl', 'enableMessage', 'message', 'enableNotiReblock',
   'enableScriptures', 'requireVerse', 'allowUbReminder'], (data) => {
     const blocked = data.blocked || [];
     const enabled = data.enabled || [];
     const favorites = data.favorites || [];
     const hardMode = data.hardMode || [];
+    const blockerDisabled = data.blockerEnabled === false;
 
     const overlap = enabled.filter(site => hardMode.includes(site));
     numProblems = overlap.length;
@@ -147,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    if(numProblems === 0) {
+    if(numProblems === 0 || blockerDisabled) {
       grantAccess(false);
     }
 
@@ -163,6 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
     disableDuration.value = data.ubDisableDuration !== undefined ? data.ubDisableDuration : 15;
     timeInput.checked = data.enableTimeInput !== undefined ? data.enableTimeInput : false;
     tempUnblocking.checked = data.enableTempUnblocking !== undefined ? data.enableTempUnblocking : true;
+    nightMode.checked = data.enableNightMode !== undefined ? data.enableNightMode : true;
     tempUbOptions.checked = data.enableTempUbOptions !== undefined ? data.enableTempUbOptions : false;
     tempUbPopup.checked = data.enableTempUbPopup !== undefined ? data.enableTempUbPopup : false;
     ubDuration.value = data.unblockDuration !== undefined ? data.unblockDuration : 5;
@@ -178,6 +188,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateCheckboxState();
     toggleFocusField();
+    
+    // Setup night mode checkbox state and visual indicators
+    setupNightModeUI();
+
+    if(isNightTime() && data.enableNightMode === true) {
+      document.getElementById('challengeSection').innerHTML = 
+        '<p style="color:red;">It is currently nighttime. You may not access the sites tab or import data at this time.</p>';
+    }
   });
 
   // Listen for changes in chrome.storage and update the blocked list in real time
@@ -209,6 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
   disableDuration.addEventListener('change', saveOptions);
   timeInput.addEventListener('change', saveOptions);
   tempUnblocking.addEventListener('change', toggleTempUnblocking);
+  nightMode.addEventListener('change', handleNightModeChange);
   tempUbOptions.addEventListener('change', saveOptions);
   tempUbPopup.addEventListener('change', saveOptions);
   ubDuration.addEventListener('change', saveOptions);
@@ -243,6 +262,32 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCheckboxState();
   }
 
+  function handleNightModeChange() {
+    // If trying to uncheck during night time, prevent it and show alert
+    if (!nightMode.checked && isNightTime()) {
+      nightMode.checked = true; // Force it back to checked
+      alert("Night mode cannot be disabled during nighttime hours (9PM-4AM). This helps maintain healthy digital habits!");
+      return; // Don't save the change
+    }
+    // If checking or unchecking during day time, allow it
+    saveOptions();
+  }
+
+  function setupNightModeUI() {
+    const nightModeLabel = nightMode.nextElementSibling;
+    if (isNightTime() && nightMode.checked) {
+      // During night time, if night mode is checked, disable the checkbox and add visual indicator
+      nightMode.disabled = true;
+      nightModeLabel.style.color = '#888';
+      nightModeLabel.innerHTML = 'Enable Night Mode (Disable unblocking 9PM-4AM) <em style="color: #ff6b35;">- Locked during night hours</em>';
+    } else {
+      // During day time or if unchecked, keep it enabled
+      nightMode.disabled = false;
+      nightModeLabel.style.color = '';
+      nightModeLabel.innerHTML = 'Enable Night Mode (Disable unblocking 9PM-4AM)';
+    }
+  }
+
   function updateCheckboxState() {
     tempUbOptions.disabled = !tempUnblocking.checked ? true : false;
     tempUbPopup.disabled = !tempUnblocking.checked ? true : false;
@@ -271,6 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ubDisableDuration = disableDuration.value;
     const enableTimeInput = timeInput.checked;
     const enableTempUnblocking = tempUnblocking.checked;
+    const enableNightMode = nightMode.checked;
     const enableTempUbOptions = tempUbOptions.disabled ? false : tempUbOptions.checked;
     const enableTempUbPopup = tempUbPopup.disabled ? false : tempUbPopup.checked;
     const unblockDuration = ubDuration.value;
@@ -284,7 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const requireVerse = ubEnableVerse.disabled ? false : ubEnableVerse.checked;
     const allowUbReminder = ubReminder.checked;
     chrome.storage.sync.set({ blockedPageBgColor, enableConfirmMessage, enableReasonInput, enableUbButtonDisabling, ubDisableDuration, 
-      enableTimeInput, enableTempUnblocking, enableTempUbOptions, enableTempUbPopup, unblockDuration, saveBlockedUrls,
+      enableTimeInput, enableTempUnblocking, enableNightMode, enableTempUbOptions, enableTempUbPopup, unblockDuration, saveBlockedUrls,
       focusOption, redirectUrl, enableMessage, message, enableNotiReblock,
       enableScriptures, requireVerse, allowUbReminder });
   }

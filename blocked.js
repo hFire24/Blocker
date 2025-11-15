@@ -50,6 +50,13 @@ function setChromeStorage(data) {
   });
 }
 
+function isNightTime() {
+  const now = new Date();
+  const currentHour = now.getHours();
+  // Night time is between 9PM (21:00) and 4AM (04:00)
+  return currentHour >= 21 || currentHour < 4;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   // Helper to show/hide navigation and display scriptures button
   function setScriptureNavigationVisibility(showNav, showDisplayBtn) {
@@ -94,9 +101,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   let allowUbReminder = true;
   let isHardMode = false;
   let challengeCompleted = false;
+  let enableNightMode = false;
 
   chrome.storage.sync.get(['blockedPageBgColor', 'enableConfirmMessage', 'enableReasonInput', 'enableUbButtonDisabling', 'ubDisableDuration',
-    'enableTempUnblocking', 'unblockDuration', 'enableTimeInput', 'saveBlockedUrls', 'productiveSites',
+    'enableTempUnblocking', 'enableNightMode', 'unblockDuration', 'enableTimeInput', 'saveBlockedUrls', 'productiveSites',
     'enableScriptures', 'requireVerse', 'allowUbReminder', 'book', 'chapter', 'verse',
     'hardMode', 'enabled', 'lastBlockedUrl'], async (data) => {
 
@@ -123,6 +131,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     disableDuration = (!isNaN(data.ubDisableDuration) && data.ubDisableDuration > 0 && data.ubDisableDuration <= 300) ? parseInt(data.ubDisableDuration, 10) : 15;
     enableTimeInput = isHardMode ? true : data.enableTimeInput || false;
     enableTempUnblocking = isHardMode ? true : data.enableTempUnblocking !== false;
+    enableNightMode = data.enableNightMode !== undefined ? data.enableNightMode : true;
     duration = isHardMode ? 5 : (!isNaN(data.unblockDuration) && data.unblockDuration > 0 && data.unblockDuration <= 1440) ? parseInt(data.unblockDuration, 10) : 5;
     saveBlockedUrls = data.saveBlockedUrls !== undefined ? data.saveBlockedUrls : 'reason';
     document.body.style.backgroundColor = isHardMode ? "#70101E" : (data.blockedPageBgColor !== undefined ? data.blockedPageBgColor : '#1E3A5F');
@@ -439,6 +448,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  function showNightModeMessage() {
+    // Hide all other sections
+    document.querySelector('.default-buttons').style.display = 'none';
+    document.querySelector('.confirm-message').style.display = 'none';
+    document.querySelector('.challenge').style.display = 'none';
+    document.querySelector('.time-input').style.display = 'none';
+    document.querySelector('.reason-input').style.display = 'none';
+    document.querySelector('.message-buttons').style.display = 'none';
+
+    // Show the night mode message
+    document.getElementById("message").innerText = "Enough.";
+    document.getElementById("verse").innerHTML = "You tried to unblock this website during nighttime hours. You should spend this time winding down and going to bed instead.";
+    document.querySelector('.night-buttons').style.display = 'block';
+
+    // Hide block count message
+    document.getElementById("productiveUrls").style.display = "none";
+    document.getElementById("blockCountMessage").style.display = "none";
+    document.getElementById("durationText").style.display = "none";
+    document.getElementById("playback").style.display = "none";
+  }
+
   function getBlockingDuration(startTime) {
     const now = Date.now();
     const durationMs = now - startTime;
@@ -698,6 +728,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('confirmUnblockButton').addEventListener('click', async () => {
     try {
+      // Check for night mode before final unblock - only for hard mode sites
+      if (isHardMode && enableNightMode && isNightTime()) {
+        showNightModeMessage();
+        return;
+      }
       await handleUnblockTime();
     } catch (error) {
       console.error('Error in handleUnblockTime:', error);
@@ -740,6 +775,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           closeTab();
         }
       });
+    } catch (error) {
+      console.error('Error in closeButton:', error)
+    }
+  });
+  document.getElementById('closeButtonNight').addEventListener('click', () => {
+    try {
+      closeTab();
     } catch (error) {
       console.error('Error in closeButton:', error)
     }

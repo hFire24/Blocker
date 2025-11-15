@@ -1,9 +1,11 @@
 let numProblems = 1;
 let correctAnswers = [];
+let enableNightMode = true;
 
-chrome.storage.sync.get(['enabled', 'hardMode'], (data) => {
+chrome.storage.sync.get(['enabled', 'hardMode', 'enableNightMode'], (data) => {
   const enabled = data.enabled || [];
   const hardMode = data.hardMode || [];
+  enableNightMode = data.enableNightMode !== undefined ? data.enableNightMode : true;
   const overlap = enabled.filter(site => hardMode.includes(site));
   numProblems = overlap.length;
 
@@ -27,10 +29,22 @@ chrome.storage.sync.get(['enabled', 'hardMode'], (data) => {
   }
 });
 
+function isNightTime() {
+  const now = new Date();
+  const currentHour = now.getHours();
+  // Night time is between 9PM (21:00) and 4AM (04:00)
+  return currentHour >= 21 || currentHour < 4;
+}
+
 document.getElementById('confirmUnblockButton').addEventListener('click', () => {
   const answers = Array.from(document.getElementsByClassName('answer-input')).map(input => parseInt(input.value));
   const allCorrect = answers.length === correctAnswers.length && answers.every((ans, idx) => ans === correctAnswers[idx]);
   if (allCorrect) {
+    if (isNightTime() && enableNightMode) {
+      alert('All answers are correct. However, it is currently nighttime, so the blocker will remain enabled. Please focus on winding down instead of unblocking websites.');
+      window.close();
+      return;
+    }
     alert('All answers are correct. The blocker will be disabled.');
     chrome.storage.sync.set({ 'blockerEnabled': false }, () => {
       window.close();
