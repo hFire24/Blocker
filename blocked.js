@@ -702,9 +702,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else if (duration === 'hours') {
         duration = parseInt(customDurationHrsInput.value) * 60 + parseInt(customDurationInput.value);
       } else if (duration === '6AM') {
-        // Calculate the time until 6 AM tomorrow
+        // Calculate the time until 6 AM
         const now = new Date();
-        const sixAM = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 6, 0, 0); // 6 AM tomorrow
+        const currentHour = now.getHours();
+        // If it's before 6 AM, use today's 6 AM. Otherwise use tomorrow's 6 AM.
+        const daysToAdd = currentHour < 6 ? 0 : 1;
+        const sixAM = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysToAdd, 6, 0, 0);
         const timeDiff = sixAM - now;
         // Set duration to the time difference in minutes
         duration = Math.floor(timeDiff / (1000 * 60));
