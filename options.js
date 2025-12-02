@@ -69,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const mathProblemsContainer = document.getElementById('mathProblems');
   let numProblems = 1;
   const correctAnswers = [];
+  let challenge = 'math';
 
   const blockedList = document.getElementById('blockedSitesList');
   const addUrlInput = document.getElementById('addUrlInput');
@@ -136,23 +137,71 @@ document.addEventListener('DOMContentLoaded', () => {
       return `${num1} × ${num2} + ${num3} = `;
     }
 
+    function generateQuote() {
+      const quoteObj = quotes[Math.floor(Math.random() * quotes.length)];
+      const challengeQuote = quoteObj.quote
+        .replace(/—|–/g, ', ')
+        .replace(/…/g, '...')
+        .replace(/[“”]/g, '"');
+      const quoteTextElem = document.getElementById('quoteText');
+      quoteTextElem.innerText = challengeQuote;
+      // Store author on the displayed quote element so we can append it after success
+      quoteTextElem.title = "Quote from " + (quoteObj.author ? quoteObj.author : "the developer, me!");
+      const quoteInput = document.getElementById('quoteInput');
+      quoteInput.value = '';
+      quoteInput.onpaste = (e) => e.preventDefault();
+      quoteInput.ondragover = (e) => e.preventDefault();
+      quoteInput.ondrop = (e) => e.preventDefault();
+
+      document.getElementById('submitAnswer').innerText = 'Submit Quote';
+    }
+
     function grantAccess(passed) {
-      document.getElementById('challengeSection').innerHTML = 
+      document.getElementById('challengeText').innerHTML = 
       passed ? '<p style="color:green;">Access Granted! You can now access the sites tab or import data.</p>' : 
-      `<p>Normally, you would need to solve math problems to gain access to the sites tab,
+      `<p>Normally, you would need to do challenges to gain access to the sites tab,
       but you already have access since you don't have any blocked sites on hard mode.</p>`;
       document.getElementById('sitesTab').disabled = false;
       document.getElementById('importButton').disabled = false;
-      openTab('Sites');
+      document.getElementById('mathProblems').style.display = 'none';
+      document.getElementById('submitAnswer').style.display = 'none';
+      if(!passed) {
+        openTab('Sites');
+      }
     }
 
     document.getElementById('submitAnswer').addEventListener('click', () => {
-      const answers = Array.from(document.getElementsByClassName('answer-input')).map(input => parseInt(input.value));
-      const allCorrect = answers.length === correctAnswers.length && answers.every((ans, idx) => ans === correctAnswers[idx]);
-      if (allCorrect) {
-        grantAccess(true);
-      } else {
-        alert('Some answers are incorrect. Please try again.');
+      switch(challenge) {
+        case 'math':
+          const answers = Array.from(document.getElementsByClassName('answer-input')).map(input => parseInt(input.value));
+          console.log(answers, correctAnswers);
+          const allCorrect = answers.length === correctAnswers.length && answers.every((ans, idx) => ans === correctAnswers[idx]);
+          if (allCorrect) {
+            document.getElementById('challengeText').innerText = 'If you want to access the sites tab or import data, you will need to type the following quote exactly as it appears.';
+            document.getElementById('mathProblems').style.display = 'none';
+            document.getElementById('quoteProblem').style.display = 'block';
+            generateQuote();
+            challenge = 'quote';
+          } else {
+            alert('Some answers are incorrect. Please try again.');
+          }
+          break;
+        case 'quote':
+          const quoteAnswer = document.getElementById('quoteInput').value.trim();
+          const expectedQuote = document.getElementById('quoteText').innerText.replace(/’/g, "'");
+          if (quoteAnswer === expectedQuote) {
+            grantAccess(true);
+            let authorText = document.getElementById('quoteText').title.replace(/^Quote from /, '');
+            if (authorText === 'the developer, me!') authorText = 'The developer, me!';
+            document.getElementById('quoteText').innerText += ' – ' + authorText;
+            document.getElementById('quoteInput').style.display = 'none';
+            document.getElementById('submitAnswer').style.display = 'none';
+          } else {
+            alert('This does not match. Please try again.');
+          }
+          break;
+        default:
+          alert('No challenge available.');
       }
     });
 

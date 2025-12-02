@@ -81,12 +81,24 @@
       You can’t shut down the system that’s protecting you while it’s still doing its job.
       If you want freedom, earn it. Not escape it.
     </p>
-    <h2>To disable the blocker, please solve these math problems:</h2>
-    <p>Tip: You may use a calculator.</p>
+    <h2 id="message">To disable the blocker, please solve these math problems:</h2>
+    <p id="flavorText">Tip: You may use a calculator.</p>
     <div id="mathProblems">
     </div>
-    <button class="confirm-unblock-button" id="confirmUnblockButton">✅ Submit Answers</button>
-    <button id="focusButton" class="focus-button">🔒 Remain Focused</button>
+    <div id="quoteChallenge" style="display:none; margin-top:20px;">
+      <p id="quoteText" style="max-width:683px;"></p>
+      <div style="display:flex; justify-content:center; margin-bottom:16px;">
+        <textarea id="quoteInput" placeholder="Start typing here..." rows="4" cols="70"></textarea>
+      </div>
+      <p id="quoteFeedback" style="color: yellow; margin-top: 10px;"></p>
+    </div>
+    <div id="challengeButtons">
+      <button class="confirm-unblock-button" id="confirmUnblockButton">✅ Submit Answers</button>
+      <button id="focusButton" class="focus-button">🔒 Remain Focused</button>
+    </div>
+    <div id="successButton" style="display:none;">
+      <button class="focus-button" id="closeButtonSuccess">Close</button>
+    </div>
   </div>
   <div class="closing-box" style="display:none;">
     <h1>Good. You made the right choice.</h1>
@@ -102,5 +114,6 @@
     <button class="focus-button" id="closeButton">Close</button>
   </div>
   <script src="challenge.js"></script>
+  <script src="quotes.js"></script>
 </body>
 </html>

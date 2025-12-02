@@ -68,8 +68,12 @@
   <div id="Access" class="tabcontent" style="display: block;">
     <h2>Grant Access</h2>
     <div id="challengeSection">
-      <p>If you want to access the sites tab or import data, you will need to solve these math problems.</p>
+      <p id="challengeText">If you want to access the sites tab or import data, you will need to solve these math problems.</p>
       <div id="mathProblems" style="font-size: 1rem;">
+      </div>
+      <div id="quoteProblem" style="display: none; font-size: 1rem;">
+        <p id="quoteText" style="max-width:683px;"></p>
+        <textarea id="quoteInput" placeholder="Start typing here..." rows="4" cols="70"></textarea>
       </div>
       <button id="submitAnswer" style="margin-bottom:1rem;">Submit Answers</button>
     </div>
@@ -234,5 +238,6 @@
   </div>
 
   <script src="options.js"></script>
+  <script src="quotes.js"></script>
 </body>
 </html>
