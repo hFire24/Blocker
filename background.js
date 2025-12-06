@@ -1,3 +1,69 @@
+const ICON_SIZES = [16, 32, 48, 128];
+let cachedActionIcons = null;
+
+async function loadBaseIconBitmap() {
+  const response = await fetch(chrome.runtime.getURL('icon48.png'));
+  const blob = await response.blob();
+  return createImageBitmap(blob);
+}
+
+function tintImageData(imageData, modifier) {
+  const data = new Uint8ClampedArray(imageData.data); // copy
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const gray = (r + g + b) / 3;
+    const [nr, ng, nb] = modifier({ r, g, b, gray });
+    data[i] = nr;
+    data[i + 1] = ng;
+    data[i + 2] = nb;
+  }
+  return new ImageData(data, imageData.width, imageData.height);
+}
+
+async function buildActionIcons() {
+  if (cachedActionIcons) return cachedActionIcons;
+
+  const bitmap = await loadBaseIconBitmap();
+  const enabled = {};
+  const disabled = {};
+
+  for (const size of ICON_SIZES) {
+    const canvas = new OffscreenCanvas(size, size);
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, size, size);
+    ctx.drawImage(bitmap, 0, 0, size, size);
+    const base = ctx.getImageData(0, 0, size, size);
+
+    enabled[size] = tintImageData(base, ({ r, g, b }) => [r, g, b]);
+    disabled[size] = tintImageData(base, ({ gray }) => [gray * 0.6, gray * 0.6, gray * 0.6]);
+  }
+
+  cachedActionIcons = { enabled, disabled };
+  return cachedActionIcons;
+}
+
+async function applyActionIcon(blockerEnabled) {
+  try {
+    const { enabled, disabled } = await buildActionIcons();
+    const imageData = blockerEnabled ? enabled : disabled;
+    chrome.action.setIcon({ imageData });
+    chrome.action.setBadgeText({ text: '' });
+  } catch (err) {
+    console.error('Failed to set action icon', err);
+  }
+}
+
+function initActionIcon() {
+  chrome.storage.sync.get(['blockerEnabled'], (data) => {
+    applyActionIcon(data.blockerEnabled !== false);
+  });
+}
+
+chrome.runtime.onStartup.addListener(initActionIcon);
+chrome.runtime.onInstalled.addListener(initActionIcon);
+
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url && tab.url.startsWith(chrome.runtime.getURL("blocked.html"))) {
     chrome.storage.sync.get(['lastBlockedUrl'], (data) => {
@@ -97,6 +163,12 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         });
       }
     });
+  }
+});
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'sync' && changes.blockerEnabled) {
+    applyActionIcon(changes.blockerEnabled.newValue !== false);
   }
 });
 
