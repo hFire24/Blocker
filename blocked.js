@@ -383,6 +383,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   };
 
+  // Helper function to extract domain from URL
+  const extractDomain = (url) => {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.origin; // Returns scheme + domain (e.g., https://example.com)
+    } catch (e) {
+      return url;
+    }
+  };
+
+  // Smart redirect: if tabs with the redirect URL exist, focus on one and close current tab
+  // Otherwise, open the redirect URL in a new tab
+  const smartRedirect = (redirectUrl) => {
+    const redirectDomain = extractDomain(redirectUrl);
+
+    chrome.tabs.query({ active: true, currentWindow: true }, (activeTabs) => {
+      const currentTabId = activeTabs[0]?.id;
+      
+      chrome.tabs.query({}, (allTabs) => {
+        // Find tabs that match the redirect URL (either exact match or same domain/base URL)
+        const matchingTabs = allTabs.filter(tab => {
+          if (!tab.url) return false;
+          const tabDomain = extractDomain(tab.url);
+          // Match if the tab's domain starts with or matches the redirect domain
+          return tabDomain.startsWith(redirectDomain) || tab.url.startsWith(redirectUrl);
+        });
+
+        if (matchingTabs.length > 0) {
+          // Close the current (blocked) tab first
+          chrome.storage.sync.remove('lastBlockedUrl');
+          chrome.tabs.remove(currentTabId, () => {
+            // Then focus on the first matching tab
+            chrome.tabs.update(matchingTabs[0].id, { active: true });
+            chrome.windows.update(matchingTabs[0].windowId, { focused: true });
+          });
+        } else {
+          // No matching tabs found, open the redirect URL
+          chrome.tabs.create({ url: redirectUrl }, () => {
+            chrome.storage.sync.remove('lastBlockedUrl');
+            chrome.tabs.remove(currentTabId);
+          });
+        }
+      });
+    });
+  };
+
   async function unblockSite(duration, canTempUnblock) {
     chrome.storage.sync.get('lastBlockedUrl', async (data) => {
       const lastBlockedUrl = data.lastBlockedUrl;
@@ -581,7 +627,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById("message").innerHTML = isHardMode ? "Good. You made the right choice." : 
         data.message !== undefined ? data.message : "You can do it! Stay focused!";
       } else if (data.focusOption === "redirect") {
-        window.location.href = data.redirectUrl;
+        smartRedirect(data.redirectUrl);
       } else {
         closeTab();
       }
@@ -773,7 +819,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       chrome.storage.sync.get(['focusOption', 'redirectUrl', 'enableMessage', 'message'], (data) => {
         if (data.focusOption === "redirect") {
-          window.location.href = data.redirectUrl;
+          smartRedirect(data.redirectUrl);
         } else {
           closeTab();
         }
