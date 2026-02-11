@@ -4,15 +4,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const openHelpButton = document.getElementById('openHelp');
   const blockStatusHeading = document.getElementById('blockStatus');
   const blockedList = document.getElementById('blockedSitesList');
+  const currentSiteSection = document.getElementById('currentSiteSection');
+  const currentSiteMessage = document.getElementById('currentSiteMessage');
+  const reblockCurrentSiteButton = document.getElementById('reblockCurrentSite');
 
   // Load the current state of the blocker and favorited blocked items
-  chrome.storage.sync.get(['blockerEnabled', 'enabled', 'favorites', 'hardMode'], (data) => {
+  chrome.storage.sync.get(['blockerEnabled', 'enabled', 'favorites', 'hardMode', 'blocked'], (data) => {
     const blockerEnabled = data.blockerEnabled !== false; // default to true if not set
     const enabled = data.enabled || [];
     const favorites = data.favorites || [];
     const hardMode = data.hardMode || [];
+    const blocked = data.blocked || [];
     updateButton(blockerEnabled);
     updateBlockedList(blockerEnabled, favorites, enabled, hardMode);
+    updateCurrentSiteStatus(blockerEnabled, blocked, enabled);
   });
 
   toggleBlockerButton.addEventListener('click', () => {
@@ -36,8 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
   function toggleBlockerState(blockerEnabled) {
     chrome.storage.sync.set({ blockerEnabled: !blockerEnabled }, () => {
       updateButton(!blockerEnabled);
-      chrome.storage.sync.get(['favorites', 'enabled', 'hardMode'], (data) => {
+      chrome.storage.sync.get(['favorites', 'enabled', 'hardMode', 'blocked'], (data) => {
         updateBlockedList(!blockerEnabled, data.favorites || [], data.enabled || [], data.hardMode || []);
+        updateCurrentSiteStatus(!blockerEnabled, data.blocked || [], data.enabled || []);
         console.log(blockerEnabled ? "BLOCKER DISABLED" : "BLOCKER ENABLED");
         if(blockerEnabled) {
           chrome.alarms.clearAll(() => {
@@ -79,6 +85,153 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateButton(blockerEnabled) {
     toggleBlockerButton.textContent = blockerEnabled ? 'Disable Blocker' : 'Enable Blocker';
     blockStatusHeading.textContent = blockerEnabled ? 'ENABLED' : 'DISABLED';
+  }
+
+  function updateCurrentSiteStatus(blockerEnabled, blocked, enabled) {
+    if (!blockerEnabled) {
+      currentSiteSection.style.display = 'none';
+      return;
+    }
+
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const activeTab = tabs && tabs[0];
+      if (!activeTab || !activeTab.url) {
+        currentSiteSection.style.display = 'none';
+        return;
+      }
+
+      const url = activeTab.url.toLowerCase();
+      if (url.startsWith('chrome://') || url.startsWith('edge://') || url.startsWith('about:')) {
+        currentSiteSection.style.display = 'none';
+        return;
+      }
+
+      const matchingBlocked = blocked.filter(blockedItem => {
+        try {
+          const regex = new RegExp(blockedItem);
+          return regex.test(url);
+        } catch (e) {
+          console.error('Invalid regex pattern:', blockedItem);
+          return false;
+        }
+      });
+
+      if (matchingBlocked.length === 0) {
+        currentSiteSection.style.display = 'none';
+        return;
+      }
+
+      const matchingEnabled = matchingBlocked.filter(item => enabled.includes(item));
+      if (matchingEnabled.length > 0) {
+        currentSiteSection.style.display = 'none';
+        return;
+      }
+
+      const displayName = getDisplayText(matchingBlocked[0]);
+      currentSiteSection.style.display = 'block';
+      currentSiteMessage.textContent = 'Checking reblock time...';
+
+      getNextReblockTime(matchingBlocked).then((nextReblockTime) => {
+        if (nextReblockTime) {
+          const remainingMs = Math.max(nextReblockTime - Date.now(), 0);
+          const remainingText = formatRemainingTime(remainingMs);
+          currentSiteMessage.innerHTML = `Unblocked for <b>${displayName}</b>. Reblocks in ${remainingText}.`;
+        } else {
+          currentSiteMessage.innerHTML = `Unblocked for <b>${displayName}</b>. It will stay unblocked until you reblock it.`;
+        }
+      });
+
+      reblockCurrentSiteButton.onclick = () => {
+        reblockCurrentSite(matchingBlocked, enabled);
+      };
+    });
+  }
+
+  function getNextReblockTime(patterns) {
+    const alarmPromises = patterns.map(pattern => new Promise(resolve => {
+      const alarmName = `reblock_${getDisplayText(pattern)}`;
+      chrome.alarms.get(alarmName, (alarm) => {
+        resolve(alarm ? alarm.scheduledTime : null);
+      });
+    }));
+
+    return Promise.all(alarmPromises).then((times) => {
+      const validTimes = times.filter(time => typeof time === 'number' && time > 0);
+      if (validTimes.length === 0) {
+        return null;
+      }
+      return Math.min(...validTimes);
+    });
+  }
+
+  function formatRemainingTime(remainingMs) {
+    const minute = 60 * 1000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+
+    if (remainingMs < minute) {
+      return 'less than a minute';
+    }
+    if (remainingMs < hour) {
+      const minutes = Math.ceil(remainingMs / minute);
+      return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+    }
+    if (remainingMs < day) {
+      const hours = Math.floor(remainingMs / hour);
+      const minutes = Math.ceil((remainingMs % hour) / minute);
+      if (minutes === 0) {
+        return `${hours} hour${hours !== 1 ? 's' : ''}`;
+      }
+      return `${hours} hour${hours !== 1 ? 's' : ''} and ${minutes} minute${minutes !== 1 ? 's' : ''}`;
+    }
+    const days = Math.floor(remainingMs / day);
+    const hours = Math.ceil((remainingMs % day) / hour);
+    if (hours === 0) {
+      return `${days} day${days !== 1 ? 's' : ''}`;
+    }
+    return `${days} day${days !== 1 ? 's' : ''} and ${hours} hour${hours !== 1 ? 's' : ''}`;
+  }
+
+  function reblockCurrentSite(patterns, enabled) {
+    const updatedEnabled = [...enabled];
+    patterns.forEach(pattern => {
+      if (!updatedEnabled.includes(pattern)) {
+        updatedEnabled.push(pattern);
+      }
+    });
+
+    chrome.storage.sync.set({ enabled: updatedEnabled }, () => {
+      patterns.forEach(pattern => {
+        const displayPattern = getDisplayText(pattern);
+        const alarmName = `reblock_${displayPattern}`;
+        chrome.alarms.clear(alarmName, () => {
+          chrome.storage.sync.remove(alarmName);
+        });
+        chrome.storage.sync.set({ [`blockedTimestamp_${displayPattern}`]: Date.now() });
+      });
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const activeTab = tabs && tabs[0];
+        if (!activeTab || !activeTab.url) {
+          updateCurrentSiteStatus(true, patterns, updatedEnabled);
+          return;
+        }
+        const activeUrl = activeTab.url.toLowerCase();
+        const shouldClose = patterns.some(pattern => {
+          try {
+            const regex = new RegExp(pattern);
+            return regex.test(activeUrl);
+          } catch (e) {
+            console.error('Invalid regex pattern:', pattern);
+            return false;
+          }
+        });
+        if (shouldClose) {
+          chrome.tabs.remove(activeTab.id);
+        } else {
+          updateCurrentSiteStatus(true, patterns, updatedEnabled);
+        }
+      });
+    });
   }
 
   function updateBlockedList(blockerEnabled, favorites, enabled, hardMode) {
