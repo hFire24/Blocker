@@ -411,12 +411,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         if (matchingTabs.length > 0) {
-          // Close the current (blocked) tab first
-          chrome.storage.sync.remove('lastBlockedUrl');
-          chrome.tabs.remove(currentTabId, () => {
-            // Then focus on the first matching tab
-            chrome.tabs.update(matchingTabs[0].id, { active: true });
-            chrome.windows.update(matchingTabs[0].windowId, { focused: true });
+          // Focus on the matching tab FIRST (before removing current tab)
+          // This ensures focus stays on the matching tab after removal
+          chrome.tabs.update(matchingTabs[0].id, { active: true });
+          chrome.windows.update(matchingTabs[0].windowId, { focused: true }, () => {
+            // Then close the current (blocked) tab
+            chrome.storage.sync.remove('lastBlockedUrl');
+            chrome.tabs.remove(currentTabId);
           });
         } else {
           // No matching tabs found, open the redirect URL
