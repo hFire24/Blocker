@@ -1,32 +1,48 @@
+let currentBlockedUrl = null;
+
+function getBlockedUrlFromQuery() {
+  try {
+    const param = new URLSearchParams(window.location.search).get('blockedUrl');
+    return param || '';
+  } catch (e) {
+    return '';
+  }
+}
+
+async function updateBlockCountForUrl(url) {
+  if (!url) return;
+  const today = getLocalDate();
+
+  chrome.storage.local.get(['blockedCounts'], async (data) => {
+    const blockedCounts = data.blockedCounts || {};
+    const countsForToday = blockedCounts[today] || {};
+    const matchingKeys = Object.keys(countsForToday).filter(k => {
+      try {
+        const regex = new RegExp(k);
+        return regex.test(url);
+      } catch (e) {
+        return false;
+      }
+    }) || [url];
+    const counts = matchingKeys.map(key => countsForToday[key] || 0);
+
+    try {
+      const blockCounts = matchingKeys.reduce((obj, key, index) => {
+        obj[key] = counts[index];
+        return obj;
+      }, {});
+      await setChromeStorage({ blockCount: blockCounts });
+    } catch (error) {
+      console.error('Error setting storage:', error);
+    }
+  });
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'setBlockedUrl') {
     const url = message.url;
-    const today = getLocalDate();
-
-    chrome.storage.local.get(['blockedCounts'], async (data) => {
-      const blockedCounts = data.blockedCounts || {};
-      const countsForToday = blockedCounts[today] || {};
-      const matchingKeys = Object.keys(countsForToday).filter(k => {
-        try {
-          const regex = new RegExp(k);
-          return regex.test(url);
-        } catch (e) {
-          return false;
-        }
-      }) || [url];
-      const counts = matchingKeys.map(key => countsForToday[key] || 0);
-
-      try {
-        await setChromeStorage({ lastBlockedUrl: url });
-        const blockCounts = matchingKeys.reduce((obj, key, index) => {
-          obj[key] = counts[index];
-          return obj;
-        }, {});
-        await setChromeStorage({ blockCount: blockCounts });
-      } catch (error) {
-        console.error('Error setting storage:', error);
-      }
-    });
+    currentBlockedUrl = url;
+    updateBlockCountForUrl(url);
   }
 });
 
@@ -58,6 +74,8 @@ function isNightTime() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  currentBlockedUrl = currentBlockedUrl || getBlockedUrlFromQuery();
+  updateBlockCountForUrl(currentBlockedUrl);
   // Helper to show/hide navigation and display scriptures button
   function setScriptureNavigationVisibility(showNav, showDisplayBtn) {
     document.getElementById('previous').style.display = showNav ? 'inline-block' : 'none';
@@ -106,14 +124,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   chrome.storage.sync.get(['blockedPageBgColor', 'enableConfirmMessage', 'enableReasonInput', 'enableUbButtonDisabling', 'ubDisableDuration',
     'enableTempUnblocking', 'enableNightMode', 'unblockDuration', 'enableTimeInput', 'saveBlockedUrls', 'productiveSites',
     'enableScriptures', 'requireVerse', 'allowUbReminder', 'book', 'chapter', 'verse',
-    'hardMode', 'enabled', 'lastBlockedUrl'], async (data) => {
+    'hardMode', 'enabled'], async (data) => {
 
     const hardModeSites = data.hardMode || [];
     const enabledSites = data.enabled || [];
-    const lastBlockedUrl = data.lastBlockedUrl || "";
-    if (lastBlockedUrl) {
+    if (currentBlockedUrl) {
       const matchedPatterns = enabledSites.filter(pattern =>
-        new RegExp(pattern).test(lastBlockedUrl.toLowerCase())
+        new RegExp(pattern).test(currentBlockedUrl.toLowerCase())
       );
       if (matchedPatterns.some(p => hardModeSites.includes(p))) {
         isHardMode = true;
@@ -216,21 +233,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         blockCountMessage.appendChild(p);
       }
     });
-    chrome.storage.sync.get('lastBlockedUrl', (data) => {
-      const lastBlockedUrl = data.lastBlockedUrl;
-      if (lastBlockedUrl) {
-        chrome.storage.sync.get(null, (data) => {
-          const enabled = data.enabled || [];
-          const matchedPatterns = enabled.filter(pattern => new RegExp(pattern).test(lastBlockedUrl.toLowerCase()));
-          if (matchedPatterns.length > 0) {
-            const timestamps = matchedPatterns.map(pattern => data[`blockedTimestamp_${getDisplayText(pattern)}`]);
-            const durations = timestamps.map(timestamp => timestamp ? getBlockingDuration(timestamp) : "a while");
-            const durationText = durations.map((duration, index) => `<b>${getDisplayText(matchedPatterns[index])}</b> has been blocked for ${duration}.`).join("<br>");
-            document.getElementById('durationText').innerHTML = durationText;
-          }
-        });
-      }
-    });
+    if (currentBlockedUrl) {
+      chrome.storage.sync.get(null, (data) => {
+        const enabled = data.enabled || [];
+        const matchedPatterns = enabled.filter(pattern => new RegExp(pattern).test(currentBlockedUrl.toLowerCase()));
+        if (matchedPatterns.length > 0) {
+          const timestamps = matchedPatterns.map(pattern => data[`blockedTimestamp_${getDisplayText(pattern)}`]);
+          const durations = timestamps.map(timestamp => timestamp ? getBlockingDuration(timestamp) : "a while");
+          const durationText = durations.map((duration, index) => `<b>${getDisplayText(matchedPatterns[index])}</b> has been blocked for ${duration}.`).join("<br>");
+          document.getElementById('durationText').innerHTML = durationText;
+        }
+      });
+    }
     // Now run scripture logic
     if(enableScriptures) {
       document.getElementById("playback").style.display = "block";
@@ -365,19 +379,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   const saveUrl = () => {
-    chrome.storage.sync.get('lastBlockedUrl', (data) => {
-      const lastBlockedUrl = data.lastBlockedUrl;
-      if (lastBlockedUrl) {
-        chrome.storage.sync.get('enabled', (data) => {
-          const patterns = data.enabled.filter(pattern => new RegExp(pattern).test(lastBlockedUrl.toLowerCase()));
-          chrome.runtime.sendMessage({ action: 'saveBlockedUrl', url: lastBlockedUrl, patterns, reason });
-        });
-      }
+    if (!currentBlockedUrl) return;
+    chrome.storage.sync.get('enabled', (data) => {
+      const patterns = data.enabled.filter(pattern => new RegExp(pattern).test(currentBlockedUrl.toLowerCase()));
+      chrome.runtime.sendMessage({ action: 'saveBlockedUrl', url: currentBlockedUrl, patterns, reason });
     });
   };
   
   const closeTab = () => {
-    chrome.storage.sync.remove('lastBlockedUrl');
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       chrome.tabs.remove(tabs[0].id);
     });
@@ -416,13 +425,11 @@ document.addEventListener('DOMContentLoaded', async () => {
           chrome.tabs.update(matchingTabs[0].id, { active: true });
           chrome.windows.update(matchingTabs[0].windowId, { focused: true }, () => {
             // Then close the current (blocked) tab
-            chrome.storage.sync.remove('lastBlockedUrl');
             chrome.tabs.remove(currentTabId);
           });
         } else {
           // No matching tabs found, open the redirect URL
           chrome.tabs.create({ url: redirectUrl }, () => {
-            chrome.storage.sync.remove('lastBlockedUrl');
             chrome.tabs.remove(currentTabId);
           });
         }
@@ -431,47 +438,42 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   async function unblockSite(duration, canTempUnblock) {
-    chrome.storage.sync.get('lastBlockedUrl', async (data) => {
-      const lastBlockedUrl = data.lastBlockedUrl;
-  
-      if (lastBlockedUrl) {
-        chrome.storage.sync.get(['blocked', 'enabled'], async (data) => {
-          const blocked = data.blocked || [];
-          const enabled = data.enabled || [];
-  
-          let toUnblock = [];
-  
-          blocked.forEach(blockedItem => {
-            try {
-              const regex = new RegExp(blockedItem);
-              if (regex.test(lastBlockedUrl.toLowerCase()) && enabled.includes(blockedItem)) {
-                toUnblock.push(blockedItem);
-              }
-            } catch (e) {
-              console.error('Invalid regex pattern:', blockedItem);
-            }
-          });
-  
-          let newEnabled = enabled.filter(enabledItem => !toUnblock.includes(enabledItem));
-  
-          await new Promise((resolve) => chrome.storage.sync.set({ enabled: newEnabled }, resolve));
-  
-          if (!isNaN(duration) && duration > 0 && duration <= 1440 && canTempUnblock) {
-            chrome.runtime.sendMessage({
-              action: 'scheduleReblock',
-              url: lastBlockedUrl,
-              duration: duration,
-              itemsToReblock: toUnblock
-            });
+    if (!currentBlockedUrl) {
+      closeTab();
+      return;
+    }
+
+    chrome.storage.sync.get(['blocked', 'enabled'], async (data) => {
+      const blocked = data.blocked || [];
+      const enabled = data.enabled || [];
+
+      let toUnblock = [];
+
+      blocked.forEach(blockedItem => {
+        try {
+          const regex = new RegExp(blockedItem);
+          if (regex.test(currentBlockedUrl.toLowerCase()) && enabled.includes(blockedItem)) {
+            toUnblock.push(blockedItem);
           }
-  
-          chrome.tabs.update({ url: lastBlockedUrl }, () => {
-            chrome.storage.sync.remove('lastBlockedUrl');
-          });
+        } catch (e) {
+          console.error('Invalid regex pattern:', blockedItem);
+        }
+      });
+
+      let newEnabled = enabled.filter(enabledItem => !toUnblock.includes(enabledItem));
+
+      await new Promise((resolve) => chrome.storage.sync.set({ enabled: newEnabled }, resolve));
+
+      if (!isNaN(duration) && duration > 0 && duration <= 1440 && canTempUnblock) {
+        chrome.runtime.sendMessage({
+          action: 'scheduleReblock',
+          url: currentBlockedUrl,
+          duration: duration,
+          itemsToReblock: toUnblock
         });
-      } else {
-        closeTab();
       }
+
+      chrome.tabs.update({ url: currentBlockedUrl });
     });
   }
 

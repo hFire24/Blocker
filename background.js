@@ -66,12 +66,17 @@ chrome.runtime.onInstalled.addListener(initActionIcon);
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url && tab.url.startsWith(chrome.runtime.getURL("blocked.html"))) {
-    chrome.storage.sync.get(['lastBlockedUrl'], (data) => {
-      if (data.lastBlockedUrl) {
-        chrome.tabs.sendMessage(tabId, { action: 'setBlockedUrl', url: data.lastBlockedUrl });
-        chrome.storage.sync.remove('lastBlockedUrl');
-      }
-    });
+    let blockedUrl = null;
+    try {
+      const urlObj = new URL(tab.url);
+      blockedUrl = urlObj.searchParams.get('blockedUrl');
+    } catch (e) {
+      blockedUrl = null;
+    }
+
+    if (blockedUrl) {
+      chrome.tabs.sendMessage(tabId, { action: 'setBlockedUrl', url: blockedUrl });
+    }
   } else if (changeInfo.status === 'loading' && tab.url) {
     chrome.storage.sync.get(['blocked', 'enabled', 'blockerEnabled', 'saveBlockedUrls'], (data) => {
       const blocked = data.blocked || [];
@@ -129,9 +134,8 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
           });
 
           chrome.storage.local.set({ blockedCounts }, () => {
-            chrome.storage.sync.set({ lastBlockedUrl: fullUrl }, () => {
-              chrome.tabs.update(tabId, { url: chrome.runtime.getURL("blocked.html") });
-            });
+            const blockedUrl = `${chrome.runtime.getURL("blocked.html")}?blockedUrl=${encodeURIComponent(fullUrl)}`;
+            chrome.tabs.update(tabId, { url: blockedUrl });
           });
         });
       } else if (isBlocked && !(matchingEnabledItems.length > 0 && blockerEnabled)) {
