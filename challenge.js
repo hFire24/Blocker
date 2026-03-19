@@ -48,7 +48,7 @@ function startQuoteStage() {
     .replace(/[“”]/g, '"');
   const quoteTextElem = document.getElementById('quoteText');
   quoteTextElem.innerText = challengeQuote;
-  quoteTextElem.title = 'Quote from ' + (quoteObj.author ? quoteObj.author : 'the developer, me!');
+  quoteTextElem.title = 'Quote from ' + (quoteObj.author ? quoteObj.author : 'the Developer');
 
   const quoteInput = document.getElementById('quoteInput');
   quoteInput.value = '';
@@ -95,7 +95,7 @@ document.getElementById('confirmUnblockButton').addEventListener('click', () => 
   document.getElementById('challengeButtons').style.display = 'none';
   document.getElementById('successButton').style.display = 'block';
   let authorText = document.getElementById('quoteText').title.replace(/^Quote from /, '');
-  if (authorText === 'the developer, me!') authorText = 'The developer, me!';
+  if (authorText === 'the Developer') authorText = 'the Developer';
   document.getElementById('quoteText').innerText += ' – ' + authorText;
   if (isNightTime() && enableNightMode) {
     feedbackElem.innerText = 'Quote correct. However, it is currently nighttime, so the blocker will remain enabled. Please focus on winding down instead of unblocking websites.';

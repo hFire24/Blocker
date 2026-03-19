@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const quoteTextElem = document.getElementById('quoteText');
       quoteTextElem.innerText = challengeQuote;
       // Store author on the displayed quote element so we can append it after success
-      quoteTextElem.title = "Quote from " + (quoteObj.author ? quoteObj.author : "the developer, me!");
+      quoteTextElem.title = "Quote from " + (quoteObj.author ? quoteObj.author : "the Developer");
       const quoteInput = document.getElementById('quoteInput');
       quoteInput.value = '';
       quoteInput.onpaste = (e) => e.preventDefault();
@@ -159,10 +159,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function grantAccess(passed) {
       document.getElementById('challengeText').innerHTML = 
       passed ? '<p style="color:green;">Access Granted! You can now access the sites tab or import data.</p>' : 
-      `<p>Normally, you would need to do challenges to gain access to the sites tab,
-      but you already have access since you don't have any blocked sites on hard mode.</p>`;
+      `<p>Because hard mode is not active on any blocked sites or search terms, access is already granted to the sites tab, and you can import data in the import/export tab.</p>`;
       document.getElementById('sitesTab').disabled = false;
+      document.getElementById('sitesTab').removeAttribute('title');
       document.getElementById('importButton').disabled = false;
+      document.getElementById('importButton').removeAttribute('title');
       document.getElementById('mathProblems').style.display = 'none';
       document.getElementById('submitAnswer').style.display = 'none';
       if(!passed) {
@@ -192,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (quoteAnswer === expectedQuote) {
             grantAccess(true);
             let authorText = document.getElementById('quoteText').title.replace(/^Quote from /, '');
-            if (authorText === 'the developer, me!') authorText = 'The developer, me!';
+            if (authorText === 'the Developer') authorText = 'the Developer';
             document.getElementById('quoteText').innerText += ' – ' + authorText;
             document.getElementById('quoteInput').style.display = 'none';
             document.getElementById('submitAnswer').style.display = 'none';

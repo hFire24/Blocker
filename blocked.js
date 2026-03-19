@@ -481,10 +481,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!enableConfirmMessage) {
       enableTimeInput ? await handleUnblockTime() : await unblockSite(duration, enableTempUnblocking);
     } else {
-      let confirmText = "Are you sure you want to unblock this site";
-      confirmText += reason === "" ? "?" : ` for the following reason: "${reason}"?`;
+      let confirmText = "Reason for unblocking: " + (reason ? `"${reason}"` : "No reason provided");
       let unblockTime = getUnblockingDuration();
-      document.getElementById("unblockTime").innerHTML = `You will be unblocking it for${unblockTime}.`
+      document.getElementById("unblockTime").innerHTML = `The site will remain unblocked <strong>${unblockTime}</strong>.<br>Restrictions may not be immediately re-enabled during this period.`;
 
       document.getElementById('confirmText').innerText = confirmText;
       document.querySelector('.time-input').style.display = 'none';
@@ -568,7 +567,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       .replace(/…/g, '...')
       .replace(/[“”]/g, '"');
     challengeQuestionElem.innerText = challengeQuote;
-    challengeQuestionElem.title = "Quote from " + (challengeText.author ? challengeText.author : "the developer, me!");
+    challengeQuestionElem.title = "Quote from " + (challengeText.author ? challengeText.author : "the Developer");
 
     const answerField = document.getElementById("challengeAnswer");
     answerField.onpaste = (e) => e.preventDefault();    // Prevent pasting
@@ -595,17 +594,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function getUnblockingDuration() {
     if (!enableTimeInput && !enableTempUnblocking || duration === 'forever')
-      return 'ever until you block it again';
+      return 'until you choose to block it again';
     else if(duration >= 60) {
       const hour = 60;
       let hours = Math.floor(duration / hour);
       let minutes = Math.floor(duration % hour);
       if (minutes === 0)
-        return ` ${hours} hour${hours !== 1 ? 's' : ''}`;
-      return ` ${hours} hour${hours !== 1 ? 's' : ''} and ${minutes} minute${minutes !== 1 ? 's' : ''}`;
+        return `for ${hours} hour${hours !== 1 ? 's' : ''}`;
+      return `for ${hours} hour${hours !== 1 ? 's' : ''} and ${minutes} minute${minutes !== 1 ? 's' : ''}`;
     }
     else
-      return ` ${duration} minute${duration !== '1' ? 's' : ''}`
+      return `for ${duration} minute${duration !== '1' ? 's' : ''}`
   }
 
   async function handleUnblockTime() {
@@ -701,7 +700,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById("challengeInput").style.display = "none";
       const challengeQuestionElem = document.getElementById("challengeQuestion");
       let authorText = challengeQuestionElem.title.replace(/^Quote from /, '');
-      if (authorText === "the developer, me!") authorText = "The developer, me!";
+      if (authorText === "the Developer") authorText = "the Developer";
       challengeQuestionElem.innerText += ` – ${authorText}`;
       const focusBtn = document.createElement('button');
       focusBtn.id = 'challengeFocusButton';

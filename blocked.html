@@ -13,7 +13,7 @@
       font-family: Arial, sans-serif;
       background-color: #1E3A5F;
     }
-    #verse, #challengeQuestion, #hardModeWarning p, #confirmText {
+    #verse, #challengeQuestion, #hardModeWarning p, #confirmText, #unblockTime {
       max-width: 683px;
     }
     .blocked-message {
@@ -185,16 +185,17 @@
       <button id="backTimeButton" class="cancel-reason-button">Go Back</button>
     </div>
     <div class="confirm-message">
-      <h2 id="confirmText"></h2>
+      <h2>Confirm Unblock</h2>
       <div id="hardModeWarning" style="display: none;">
-        <h3>FINAL NOTE:</h3>
-        <p>Anime girls are not your friends. They are not comfort. They are not rest.
-        They are the screen you hide behind when you're afraid to live your own story.
-        And every minute you stare at them is a minute you don’t get back.
+        <h3>Final Confirmation</h3>
+        <p>
+          You are about to temporarily remove a restriction on this website.<br>
+          Please proceed only if you are certain this is your intended choice.
         </p>
-        <p>Are you sure you want to proceed?</p>
       </div>
-      <p id="unblockTime"></p>      
+      <p id="confirmText"></p>
+      <p id="unblockTime"></p>
+      <p>Are you sure you want to proceed?</p>
       <button id="confirmUnblockButton" class="confirm-unblock-button">🔓 Yes, Unblock Site</button>
       <button id="backConfirmButton" class="submit-reason-button">⏳ No, Adjust Time</button>
       <button id="cancelUnblockButton" class="focus-button">🔒 No, Block Site</button>
