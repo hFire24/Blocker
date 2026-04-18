@@ -115,6 +115,31 @@
       color: white;
       margin-right: 20px;
     }
+    #dailyGoals {
+      list-style-type: none;
+      margin: 0 auto;
+      max-width: 683px;
+      padding: 0;
+      text-align: left;
+    }
+    #dailyGoals li {
+      align-items: center;
+      display: grid;
+      gap: 10px;
+      grid-template-columns: 28px minmax(0, 1fr) auto;
+      margin-bottom: 10px;
+      justify-content: center;
+      font-size: 1rem;
+    }
+    #dailyGoals a, #dailyGoals a:visited {
+      color: white;
+      justify-self: start;
+      width: max-content;
+    }
+    #dailyGoals .completed {
+      color: #CCC;
+      text-decoration: line-through;
+    }
     #productiveUrls a:hover {
       color: #CCC;
     }
@@ -205,6 +230,10 @@
         <button id="savedUrlsButton" class="confirm-unblock-button">💾 View Saved URLs</button>
         <button id="editMessageButton" class="submit-reason-button" style="display:inline;">📝 Edit Message</button>
         <button id="closeButton" class="focus-button">🔒 Close Tab</button>
+      </div>
+      <div id="dailyGoalsSection" style="display:none;">
+        <h2>Daily Goals</h2>
+        <ul id="dailyGoals"></ul>
       </div>
       <h2>Productive Sites</h2>
       <div id="productiveUrls">

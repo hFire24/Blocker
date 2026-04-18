@@ -437,6 +437,124 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   };
 
+  function isDailyGoalCompletedToday(goal) {
+    return goal.completedDate === getLocalDate();
+  }
+
+  function getNextDailyGoal(dailyGoals) {
+    return (dailyGoals || []).find(goal => goal.url && !isDailyGoalCompletedToday(goal));
+  }
+
+  function resetDailyGoalsIfNeeded(callback) {
+    chrome.runtime.sendMessage({ action: 'resetDailyGoals' }, () => {
+      callback();
+    });
+  }
+
+  function redirectToNextDailyGoal(fallback) {
+    resetDailyGoalsIfNeeded(() => chrome.storage.sync.get(['dailyGoals'], (data) => {
+      const nextGoal = getNextDailyGoal(data.dailyGoals || []);
+      if (nextGoal) {
+        smartRedirect(nextGoal.url);
+      } else {
+        fallback();
+      }
+    }));
+  }
+
+  function toggleDailyGoal(goalId, completed) {
+    chrome.storage.sync.get(['dailyGoals'], (data) => {
+      const dailyGoals = data.dailyGoals || [];
+      const updatedGoals = dailyGoals.map(goal => {
+        if (goal.id !== goalId) return goal;
+        return {
+          ...goal,
+          completedDate: completed ? getLocalDate() : ''
+        };
+      });
+      chrome.storage.sync.set({ dailyGoals: updatedGoals }, renderDailyGoals);
+    });
+  }
+
+  function renderDailyGoals() {
+    resetDailyGoalsIfNeeded(() => chrome.storage.sync.get(['dailyGoals'], (data) => {
+      const dailyGoals = data.dailyGoals || [];
+      const dailyGoalsSection = document.getElementById('dailyGoalsSection');
+      const dailyGoalsList = document.getElementById('dailyGoals');
+      const closeButton = document.getElementById('closeButton');
+
+      if (!dailyGoalsSection || !dailyGoalsList || dailyGoals.length === 0) {
+        return;
+      }
+
+      dailyGoalsSection.style.display = 'block';
+      dailyGoalsList.innerHTML = '';
+
+      dailyGoals.forEach(goal => {
+        const isCompleted = isDailyGoalCompletedToday(goal);
+        const listItem = document.createElement('li');
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = isCompleted;
+        checkbox.addEventListener('change', () => {
+          toggleDailyGoal(goal.id, checkbox.checked);
+        });
+
+        const title = document.createElement('span');
+        title.textContent = goal.title || 'Daily Goal';
+        title.classList.add('name');
+        if (isCompleted) {
+          title.classList.add('completed');
+        }
+
+        const link = document.createElement('a');
+        link.href = goal.url;
+        link.textContent = 'Open';
+        link.classList.add('text');
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          smartRedirect(goal.url);
+        });
+
+        listItem.appendChild(checkbox);
+        listItem.appendChild(title);
+        listItem.appendChild(link);
+        dailyGoalsList.appendChild(listItem);
+      });
+
+      adjustDailyGoalColumnWidths();
+      closeButton.innerText = getNextDailyGoal(dailyGoals) ? '➡️ Go to Next Goal' : '🔒 Close Tab';
+    }));
+  }
+
+  function adjustDailyGoalColumnWidths() {
+    const dailyGoalsList = document.getElementById('dailyGoals');
+
+    let longestName = 0;
+    Array.from(dailyGoalsList.children).forEach(li => {
+      const name = li.querySelector('.name').textContent;
+
+      const nameWidth = getTextWidth(name, '16px Arial');
+
+      if (nameWidth > longestName) longestName = nameWidth;
+    });
+
+    longestName += 10;
+
+    Array.from(dailyGoalsList.children).forEach(li => {
+      li.style.gridTemplateColumns = `28px ${longestName}px max-content`;
+    });
+  }
+
+  function getTextWidth(text, font) {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    context.font = font;
+    const metrics = context.measureText(text);
+    return metrics.width;
+  }
+
   async function unblockSite(duration, canTempUnblock) {
     if (!currentBlockedUrl) {
       closeTab();
@@ -616,8 +734,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function remainFocused() {
-    chrome.storage.sync.get(['focusOption', 'redirectUrl', 'enableMessage', 'message'], (data) => {
-      if(data.enableMessage || isHardMode) {
+    chrome.storage.sync.get(['focusOption', 'redirectUrl', 'enableMessage', 'message', 'dailyGoals'], (data) => {
+      const hasDailyGoals = (data.dailyGoals || []).length > 0;
+      if(data.enableMessage || isHardMode || hasDailyGoals) {
         document.querySelector(".default-buttons").style.display = "none";
         document.querySelector(".confirm-message").style.display = "none";
         document.querySelector(".challenge").style.display = "none";
@@ -628,6 +747,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById("durationText").innerHTML = "";
         document.getElementById("message").innerHTML = isHardMode ? "Good. You made the right choice." : 
         data.message !== undefined ? data.message : "You can do it! Stay focused!";
+        renderDailyGoals();
       } else if (data.focusOption === "redirect") {
         smartRedirect(data.redirectUrl);
       } else {
@@ -820,11 +940,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('closeButton').addEventListener('click', () => {
     try {
       chrome.storage.sync.get(['focusOption', 'redirectUrl', 'enableMessage', 'message'], (data) => {
-        if (data.focusOption === "redirect") {
-          smartRedirect(data.redirectUrl);
-        } else {
-          closeTab();
-        }
+        redirectToNextDailyGoal(() => {
+          if (data.focusOption === "redirect") {
+            smartRedirect(data.redirectUrl);
+          } else {
+            closeTab();
+          }
+        });
       });
     } catch (error) {
       console.error('Error in closeButton:', error)

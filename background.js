@@ -61,8 +61,37 @@ function initActionIcon() {
   });
 }
 
-chrome.runtime.onStartup.addListener(initActionIcon);
-chrome.runtime.onInstalled.addListener(initActionIcon);
+function resetDailyGoalsIfNeeded(callback) {
+  const today = getLocalDate();
+  chrome.storage.sync.get(['dailyGoals', 'dailyGoalsLastResetDate'], (data) => {
+    const dailyGoals = data.dailyGoals || [];
+
+    if (data.dailyGoalsLastResetDate === today) {
+      if (callback) callback();
+      return;
+    }
+
+    const resetGoals = dailyGoals.map(goal => ({
+      ...goal,
+      completedDate: ''
+    }));
+
+    chrome.storage.sync.set({
+      dailyGoals: resetGoals,
+      dailyGoalsLastResetDate: today
+    }, () => {
+      if (callback) callback();
+    });
+  });
+}
+
+function initDailyState() {
+  initActionIcon();
+  resetDailyGoalsIfNeeded();
+}
+
+chrome.runtime.onStartup.addListener(initDailyState);
+chrome.runtime.onInstalled.addListener(initDailyState);
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url && tab.url.startsWith(chrome.runtime.getURL("blocked.html"))) {
@@ -233,6 +262,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const { url, patterns, reason } = message;
     saveBlockedUrl(url, patterns, reason);
     sendResponse(); // Immediately send response
+  } else if (message.action === 'resetDailyGoals') {
+    resetDailyGoalsIfNeeded(sendResponse);
+    return true;
   }
 });
 

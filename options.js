@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const accessTab = document.getElementById('accessTab');
   const sitesTab = document.getElementById('sitesTab');
   const optionsTab = document.getElementById('optionsTab');
+  const dailyGoalsTab = document.getElementById('dailyGoalsTab');
   const analyticsTab = document.getElementById('analyticsTab');
   const savedUrlsTab = document.getElementById('savedUrlsTab');
   const productiveUrlsTab = document.getElementById('productiveUrlsTab');
@@ -33,6 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
   accessTab.addEventListener('click', () => openTab('Access'));
   sitesTab.addEventListener('click', () => openTab('Sites'));
   optionsTab.addEventListener('click', () => openTab('Options'));
+  dailyGoalsTab.addEventListener('click', () => {
+    openTab('DailyGoals');
+    loadDailyGoals();
+  });
   analyticsTab.addEventListener('click', () => openTab('Analytics'));
   savedUrlsTab.addEventListener('click', () => openTab('SavedUrls'));
   productiveUrlsTab.addEventListener('click', () => openTab('ProductiveUrls'))
@@ -46,6 +51,9 @@ document.addEventListener('DOMContentLoaded', () => {
       switch(data.openTab) {
         case 'Analytics':
           loadAnalytics();
+          break;
+        case 'DailyGoals':
+          loadDailyGoals();
           break;
         case 'SavedUrls':
           loadSavedUrls();
@@ -77,6 +85,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const addProductiveInput = document.getElementById('addProductiveInput')
   const addProductiveButton = document.getElementById('addProductiveButton');
+  const addDailyGoalTitle = document.getElementById('addDailyGoalTitle');
+  const addDailyGoalUrl = document.getElementById('addDailyGoalUrl');
+  const addDailyGoalButton = document.getElementById('addDailyGoalButton');
 
   const backgroundColorSelect = document.getElementById('backgroundColorSelect');
   const confirmMessage = document.getElementById('enableConfirmMessage');
@@ -159,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function grantAccess(passed) {
       document.getElementById('challengeText').innerHTML = 
       passed ? '<p style="color:green;">Access Granted! You can now access the sites tab or import data.</p>' : 
-      `<p>Because hard mode is not active on any blocked sites or search terms, access is already granted to the sites tab, and you can import data in the import/export tab.</p>`;
+      `<p>Hard mode is not active on any blocked sites or search terms. Access is already granted to the sites tab, and importing data in the import/export tab is enabled.</p>`;
       document.getElementById('sitesTab').disabled = false;
       document.getElementById('sitesTab').removeAttribute('title');
       document.getElementById('importButton').disabled = false;
@@ -773,6 +784,8 @@ document.addEventListener('DOMContentLoaded', () => {
       updateBlockedOrder(); // Update blocked site order
     } else if (draggedList.id === 'productiveSitesList') {
       updateProductiveOrder(); // Update productive URLs order
+    } else if (draggedList.id === 'dailyGoalsList') {
+      updateDailyGoalOrder();
     }
     return false;
   }
@@ -821,6 +834,245 @@ document.addEventListener('DOMContentLoaded', () => {
       chrome.storage.sync.set({ productive }, () => {
         console.log('Productive URLs order updated');
       });
+    });
+  }
+
+  function getTodayDate() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  function isDailyGoalCompletedToday(goal) {
+    return goal.completedDate === getTodayDate();
+  }
+
+  function normalizeDailyGoalUrl(url) {
+    const trimmed = url.trim();
+    if (!trimmed) return '';
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    return `https://${trimmed}`;
+  }
+
+  function createDailyGoal(title, url) {
+    return {
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      title,
+      url,
+      completedDate: ''
+    };
+  }
+
+  function resetDailyGoalsIfNeeded(callback) {
+    chrome.runtime.sendMessage({ action: 'resetDailyGoals' }, () => {
+      callback();
+    });
+  }
+
+  addDailyGoalButton.addEventListener('click', () => {
+    const title = addDailyGoalTitle.value.trim();
+    const url = normalizeDailyGoalUrl(addDailyGoalUrl.value);
+
+    if (!title) {
+      alert('Please enter a task name.');
+      return;
+    }
+
+    if (!url) {
+      alert('Please enter a URL.');
+      return;
+    }
+
+    try {
+      new URL(url);
+    } catch (e) {
+      alert('Please enter a valid URL.');
+      return;
+    }
+
+    chrome.storage.sync.get(['dailyGoals'], (data) => {
+      const dailyGoals = data.dailyGoals || [];
+      dailyGoals.push(createDailyGoal(title, url));
+      chrome.storage.sync.set({ dailyGoals }, () => {
+        addDailyGoalTitle.value = '';
+        addDailyGoalUrl.value = '';
+        loadDailyGoals();
+      });
+    });
+  });
+
+  function loadDailyGoals() {
+    resetDailyGoalsIfNeeded(() => chrome.storage.sync.get(['dailyGoals'], (data) => {
+      const dailyGoals = data.dailyGoals || [];
+      const dailyGoalsList = document.getElementById('dailyGoalsList');
+      dailyGoalsList.innerHTML = '';
+
+      dailyGoals.forEach(goal => {
+        addDailyGoalToList(goal);
+      });
+      adjustDailyGoalColumnWidths();
+    }));
+  }
+
+  function addDailyGoalToList(goal) {
+    const dailyGoalsList = document.getElementById('dailyGoalsList');
+    const listItem = document.createElement('li');
+    listItem.draggable = true;
+    listItem.dataset.goalId = goal.id;
+
+    const dragHandle = document.createElement('span');
+    dragHandle.textContent = '☰';
+    dragHandle.className = 'drag-handle';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = isDailyGoalCompletedToday(goal);
+    checkbox.title = 'Completed today';
+    checkbox.addEventListener('change', () => {
+      toggleDailyGoal(goal.id, checkbox.checked);
+    });
+
+    const nameText = document.createElement('span');
+    nameText.textContent = goal.title || 'Daily Goal';
+    nameText.classList.add('name');
+    if (checkbox.checked) {
+      nameText.classList.add('disabled');
+    }
+
+    const urlText = document.createElement('a');
+    urlText.href = goal.url;
+    urlText.textContent = goal.url;
+    urlText.classList.add('text');
+
+    const buttonGroup = document.createElement('div');
+    buttonGroup.className = 'button-group';
+
+    const editButton = document.createElement('button');
+    editButton.textContent = 'Edit';
+    editButton.addEventListener('click', () => {
+      editDailyGoal(goal);
+    });
+
+    const deleteButton = document.createElement('button');
+    deleteButton.textContent = 'Delete';
+    deleteButton.addEventListener('click', () => {
+      deleteDailyGoal(goal.id, goal.title);
+    });
+
+    buttonGroup.appendChild(editButton);
+    buttonGroup.appendChild(deleteButton);
+
+    listItem.appendChild(dragHandle);
+    listItem.appendChild(checkbox);
+    listItem.appendChild(nameText);
+    listItem.appendChild(urlText);
+    listItem.appendChild(buttonGroup);
+
+    listItem.addEventListener('dragstart', handleDragStart);
+    listItem.addEventListener('dragover', handleDragOver);
+    listItem.addEventListener('drop', handleDrop);
+    listItem.addEventListener('dragend', handleDragEnd);
+
+    dailyGoalsList.appendChild(listItem);
+  }
+
+  function toggleDailyGoal(goalId, completed) {
+    chrome.storage.sync.get(['dailyGoals'], (data) => {
+      const dailyGoals = data.dailyGoals || [];
+      const updatedGoals = dailyGoals.map(goal => {
+        if (goal.id !== goalId) return goal;
+        return {
+          ...goal,
+          completedDate: completed ? getTodayDate() : ''
+        };
+      });
+      chrome.storage.sync.set({ dailyGoals: updatedGoals }, loadDailyGoals);
+    });
+  }
+
+  function editDailyGoal(goal) {
+    const newTitle = prompt('Task name:', goal.title || 'Daily Goal');
+    if (newTitle === null) return;
+
+    const trimmedTitle = newTitle.trim();
+    if (!trimmedTitle) {
+      alert('Please enter a task name.');
+      return;
+    }
+
+    const newUrl = prompt('Goal URL:', goal.url || 'https://');
+    if (newUrl === null) return;
+
+    const normalizedUrl = normalizeDailyGoalUrl(newUrl);
+    try {
+      new URL(normalizedUrl);
+    } catch (e) {
+      alert('Please enter a valid URL.');
+      return;
+    }
+
+    chrome.storage.sync.get(['dailyGoals'], (data) => {
+      const dailyGoals = data.dailyGoals || [];
+      const updatedGoals = dailyGoals.map(existingGoal => {
+        if (existingGoal.id !== goal.id) return existingGoal;
+        return {
+          ...existingGoal,
+          title: trimmedTitle,
+          url: normalizedUrl
+        };
+      });
+      chrome.storage.sync.set({ dailyGoals: updatedGoals }, loadDailyGoals);
+    });
+  }
+
+  function deleteDailyGoal(goalId, title) {
+    if (!confirm(`Are you sure you want to delete ${title || 'this goal'}?`)) return;
+
+    chrome.storage.sync.get(['dailyGoals'], (data) => {
+      const dailyGoals = data.dailyGoals || [];
+      chrome.storage.sync.set({
+        dailyGoals: dailyGoals.filter(goal => goal.id !== goalId)
+      }, loadDailyGoals);
+    });
+  }
+
+  function updateDailyGoalOrder() {
+    const orderedGoalIds = Array.from(document.getElementById('dailyGoalsList').children).map(li => li.dataset.goalId);
+
+    chrome.storage.sync.get(['dailyGoals'], (data) => {
+      const dailyGoals = data.dailyGoals || [];
+      dailyGoals.sort((a, b) => orderedGoalIds.indexOf(a.id) - orderedGoalIds.indexOf(b.id));
+      chrome.storage.sync.set({ dailyGoals }, () => {
+        console.log('Daily goal order updated');
+        adjustDailyGoalColumnWidths();
+      });
+    });
+  }
+
+  function adjustDailyGoalColumnWidths() {
+    const dailyGoalsList = document.getElementById('dailyGoalsList');
+
+    let longestName = 0;
+    let longestUrl = 0;
+
+    Array.from(dailyGoalsList.children).forEach(li => {
+      const name = li.querySelector('.name').textContent;
+      const url = li.querySelector('.text').textContent;
+
+      const nameWidth = getTextWidth(name, '12px Arial');
+      const urlWidth = getTextWidth(url, '12px Arial');
+
+      if (nameWidth > longestName) longestName = nameWidth;
+      if (urlWidth > longestUrl) longestUrl = urlWidth;
+    });
+
+    longestName += 20;
+    longestUrl += 20;
+
+    Array.from(dailyGoalsList.children).forEach(li => {
+      li.style.gridTemplateColumns = `20px 28px ${longestName}px ${longestUrl}px auto`;
     });
   }
 
