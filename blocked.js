@@ -442,7 +442,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function getNextDailyGoal(dailyGoals) {
-    return (dailyGoals || []).find(goal => goal.url && !isDailyGoalCompletedToday(goal));
+    return (dailyGoals || []).find(goal => !isDailyGoalCompletedToday(goal));
   }
 
   function resetDailyGoalsIfNeeded(callback) {
@@ -454,7 +454,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function redirectToNextDailyGoal(fallback) {
     resetDailyGoalsIfNeeded(() => chrome.storage.sync.get(['dailyGoals'], (data) => {
       const nextGoal = getNextDailyGoal(data.dailyGoals || []);
-      if (nextGoal) {
+      if (nextGoal && nextGoal.url) {
         smartRedirect(nextGoal.url);
       } else {
         fallback();
@@ -502,20 +502,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         const title = document.createElement('span');
-        title.textContent = goal.title || 'Daily Goal';
+        title.textContent = goal.title || 'Habit';
         title.classList.add('name');
         if (isCompleted) {
           title.classList.add('completed');
         }
 
-        const link = document.createElement('a');
-        link.href = goal.url;
-        link.textContent = 'Open';
+        const link = goal.url ? document.createElement('a') : document.createElement('span');
+        if (goal.url) {
+          link.href = goal.url;
+          link.textContent = 'Open';
+          link.addEventListener('click', (event) => {
+            event.preventDefault();
+            smartRedirect(goal.url);
+          });
+        } else {
+          link.textContent = 'No URL';
+        }
         link.classList.add('text');
-        link.addEventListener('click', (event) => {
-          event.preventDefault();
-          smartRedirect(goal.url);
-        });
 
         listItem.appendChild(checkbox);
         listItem.appendChild(title);
@@ -524,7 +528,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
 
       adjustDailyGoalColumnWidths();
-      closeButton.innerText = getNextDailyGoal(dailyGoals) ? '➡️ Go to Next Goal' : '🔒 Close Tab';
+      const nextGoal = getNextDailyGoal(dailyGoals);
+      closeButton.innerText = nextGoal && nextGoal.url ? '➡️ Go to Next Habit' : '🔒 Close Tab';
     }));
   }
 

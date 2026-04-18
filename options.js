@@ -876,20 +876,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const url = normalizeDailyGoalUrl(addDailyGoalUrl.value);
 
     if (!title) {
-      alert('Please enter a task name.');
+      alert('Please enter a habit name.');
       return;
     }
 
-    if (!url) {
-      alert('Please enter a URL.');
-      return;
-    }
-
-    try {
-      new URL(url);
-    } catch (e) {
-      alert('Please enter a valid URL.');
-      return;
+    if (url) {
+      try {
+        new URL(url);
+      } catch (e) {
+        alert('Please enter a valid URL.');
+        return;
+      }
     }
 
     chrome.storage.sync.get(['dailyGoals'], (data) => {
@@ -935,15 +932,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const nameText = document.createElement('span');
-    nameText.textContent = goal.title || 'Daily Goal';
+    nameText.textContent = goal.title || 'Habit';
     nameText.classList.add('name');
     if (checkbox.checked) {
       nameText.classList.add('disabled');
     }
 
-    const urlText = document.createElement('a');
-    urlText.href = goal.url;
-    urlText.textContent = goal.url;
+    const urlText = goal.url ? document.createElement('a') : document.createElement('span');
+    if (goal.url) {
+      urlText.href = goal.url;
+    }
+    urlText.textContent = goal.url || 'No URL';
     urlText.classList.add('text');
 
     const buttonGroup = document.createElement('div');
@@ -993,24 +992,26 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function editDailyGoal(goal) {
-    const newTitle = prompt('Task name:', goal.title || 'Daily Goal');
+    const newTitle = prompt('Habit name:', goal.title || 'Habit');
     if (newTitle === null) return;
 
     const trimmedTitle = newTitle.trim();
     if (!trimmedTitle) {
-      alert('Please enter a task name.');
+      alert('Please enter a habit name.');
       return;
     }
 
-    const newUrl = prompt('Goal URL:', goal.url || 'https://');
+    const newUrl = prompt('Habit URL (optional):', goal.url || '');
     if (newUrl === null) return;
 
     const normalizedUrl = normalizeDailyGoalUrl(newUrl);
-    try {
-      new URL(normalizedUrl);
-    } catch (e) {
-      alert('Please enter a valid URL.');
-      return;
+    if (normalizedUrl) {
+      try {
+        new URL(normalizedUrl);
+      } catch (e) {
+        alert('Please enter a valid URL.');
+        return;
+      }
     }
 
     chrome.storage.sync.get(['dailyGoals'], (data) => {
@@ -1028,7 +1029,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function deleteDailyGoal(goalId, title) {
-    if (!confirm(`Are you sure you want to delete ${title || 'this goal'}?`)) return;
+    if (!confirm(`Are you sure you want to delete ${title || 'this habit'}?`)) return;
 
     chrome.storage.sync.get(['dailyGoals'], (data) => {
       const dailyGoals = data.dailyGoals || [];
@@ -1045,7 +1046,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const dailyGoals = data.dailyGoals || [];
       dailyGoals.sort((a, b) => orderedGoalIds.indexOf(a.id) - orderedGoalIds.indexOf(b.id));
       chrome.storage.sync.set({ dailyGoals }, () => {
-        console.log('Daily goal order updated');
+        console.log('Habit order updated');
         adjustDailyGoalColumnWidths();
       });
     });

@@ -59,7 +59,7 @@
     <button id="accessTab" class="tablinks active" data-tab="Access">Grant Access</button>
     <button id="sitesTab" class="tablinks" data-tab="Sites" disabled title="Grant Access to access Sites tab">Sites</button>
     <button id="optionsTab" class="tablinks" data-tab="Options">Options</button>
-    <button id="dailyGoalsTab" class="tablinks" data-tab="DailyGoals">Daily Goals</button>
+    <button id="dailyGoalsTab" class="tablinks" data-tab="DailyGoals">Habit Tracker</button>
     <button id="analyticsTab" class="tablinks" data-tab="Analytics">Analytics</button>
     <button id="savedUrlsTab" class="tablinks" data-tab="SavedUrls">Saved URLs</button>
     <button id="productiveUrlsTab" class="tablinks" data-tab="ProductiveUrls">Productive URLs</button>
@@ -184,11 +184,11 @@
   </div>
 
   <div id="DailyGoals" class="tabcontent">
-    <h2>Daily Goals</h2>
-    <p>Add the tasks you want to do today. When you choose to remain focused, this list appears, and closing that screen sends you to the first unfinished goal in this order.</p>
+    <h2>Habit Tracker</h2>
+    <p>Add the habits you want to do today. URLs are optional. When you choose to remain focused, this list appears, and closing that screen sends you to the first unfinished habit only when it has a URL.</p>
     <div class="input-container">
-      <input type="text" id="addDailyGoalTitle" placeholder="Task name">
-      <input type="text" id="addDailyGoalUrl" placeholder="https://example.com" size="50">
+      <input type="text" id="addDailyGoalTitle" placeholder="Habit name">
+      <input type="text" id="addDailyGoalUrl" placeholder="Optional URL" size="50">
       <button id="addDailyGoalButton">Add</button>
     </div>
     <ul id="dailyGoalsList"></ul>

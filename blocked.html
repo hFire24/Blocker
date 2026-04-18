@@ -118,7 +118,8 @@
     #dailyGoals {
       list-style-type: none;
       margin: 0 auto;
-      max-width: 683px;
+      width: fit-content;
+      max-width: min(683px, 100%);
       padding: 0;
       text-align: left;
     }
@@ -128,8 +129,9 @@
       gap: 10px;
       grid-template-columns: 28px minmax(0, 1fr) auto;
       margin-bottom: 10px;
-      justify-content: center;
+      justify-content: start;
       font-size: 1rem;
+      width: 100%;
     }
     #dailyGoals a, #dailyGoals a:visited {
       color: white;
@@ -232,7 +234,7 @@
         <button id="closeButton" class="focus-button">🔒 Close Tab</button>
       </div>
       <div id="dailyGoalsSection" style="display:none;">
-        <h2>Daily Goals</h2>
+        <h2>Habit Tracker</h2>
         <ul id="dailyGoals"></ul>
       </div>
       <h2>Productive Sites</h2>
