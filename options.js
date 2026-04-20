@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const productiveUrlsTab = document.getElementById('productiveUrlsTab');
   const exportTab = document.getElementById('exportTab');
   const helpTab = document.getElementById('helpTab');
+  let requestedStartupTab = null;
 
   function openTab(tabName) {
     const tabcontent = document.getElementsByClassName("tabcontent");
@@ -47,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Check if a specific tab should be opened
   chrome.storage.sync.get(['openTab'], (data) => {
     if (data.openTab) {
+      requestedStartupTab = data.openTab;
       openTab(data.openTab);
       switch(data.openTab) {
         case 'Analytics':
@@ -68,9 +70,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === 'openSavedUrls') {
-      openTab('SavedUrls');
-      loadSavedUrls();
+    if (message.action === 'openDailyGoals') {
+      openTab('DailyGoals');
+      loadDailyGoals();
     }
   });
 
@@ -177,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('importButton').removeAttribute('title');
       document.getElementById('mathProblems').style.display = 'none';
       document.getElementById('submitAnswer').style.display = 'none';
-      if(!passed) {
+      if(!passed && !requestedStartupTab) {
         openTab('Sites');
       }
     }

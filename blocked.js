@@ -964,7 +964,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Error in closeButton:', error)
     }
   });
-  document.getElementById('savedUrlsButton').addEventListener('click', async () => {
+  document.getElementById('habitTrackerButton').addEventListener('click', async () => {
     try {
       chrome.tabs.query({}, (tabs) => {
         const optionsUrl = chrome.runtime.getURL('options.html');
@@ -979,19 +979,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   
         if (optionsTab) {
           chrome.tabs.update(optionsTab.id, { active: true }, () => {
-            chrome.tabs.sendMessage(optionsTab.id, { action: 'openSavedUrls' });
+            chrome.tabs.sendMessage(optionsTab.id, { action: 'openDailyGoals' });
           });
           chrome.tabs.getCurrent((tab) => {
             chrome.tabs.remove(tab.id);
           });
         } else {
-          chrome.tabs.update({ url: optionsUrl }, () => {
-            chrome.storage.sync.set({ openTab: 'SavedUrls' });
+          chrome.storage.sync.set({ openTab: 'DailyGoals' }, () => {
+            chrome.tabs.update({ url: optionsUrl });
           });
         }
       });
     } catch (error) {
-      console.error('Error in seeUrlsButton:', error);
+      console.error('Error in habitTrackerButton:', error);
     }
   });
   document.getElementById('previous').addEventListener('click', goToPreviousVerse);
