@@ -823,20 +823,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateProductiveOrder() {
-    const newOrder = Array.from(document.getElementById('productiveSitesList').children).map(li => {
-      return li.querySelector('.text').textContent.trim(); // Get URL text
-    });
-
-    // Save the new productive URL order to chrome storage
-    chrome.storage.sync.get(['productive'], (data) => {
-      const productive = data.productive || [];
-      // Assuming the productive list is just a flat array of URLs, reorder it based on the new order
-      productive.sort((a, b) => newOrder.indexOf(a) - newOrder.indexOf(b));
-
-      chrome.storage.sync.set({ productive }, () => {
-        console.log('Productive URLs order updated');
-      });
-    });
+    saveProductiveSites();
   }
 
   function getTodayDate() {

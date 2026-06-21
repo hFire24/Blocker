@@ -3,6 +3,7 @@
 <head>
   <title>Website Blocked</title>
   <meta charset="UTF-8">
+  <link rel="stylesheet" href="assets/common.css">
   <style>
     body {
       display: flex;
@@ -13,8 +14,8 @@
       font-family: Arial, sans-serif;
       background-color: #1E3A5F;
     }
-    #verse, #challengeQuestion, #hardModeWarning p, #confirmText, #unblockTime {
-      max-width: 683px;
+    #verse, #challengeQuestion, #hardModeWarning p, #confirmText, #unblockTime, #productiveUrls {
+      max-width: var(--content-max-width);
     }
     .blocked-message {
       text-align: center;
@@ -110,16 +111,20 @@
     }
     #productiveUrls {
       font-size: 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      column-gap: 20px;
+      row-gap: 10px;
     }
     #productiveUrls a, #productiveUrls a:visited {
       color: white;
-      margin-right: 20px;
     }
     #dailyGoals {
       list-style-type: none;
       margin: 0 auto;
       width: fit-content;
-      max-width: min(683px, 100%);
+      max-width: min(var(--content-max-width), 100%);
       padding: 0;
       text-align: left;
     }

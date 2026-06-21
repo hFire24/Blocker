@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Website Blocker Options</title>
+  <link rel="stylesheet" href="assets/common.css">
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
     .tab { overflow: hidden; border: 1px solid #ccc; background-color: #f1f1f1; }
@@ -49,6 +50,7 @@
     }
     .hard:hover { background-color: #c82333; }
     .answer-input { width: 100px; }
+    #quoteText { max-width: var(--content-max-width); }
     button:disabled { cursor: not-allowed; }
   </style>
 </head>
@@ -75,7 +77,7 @@
       <div id="mathProblems" style="font-size: 1rem;">
       </div>
       <div id="quoteProblem" style="display: none; font-size: 1rem;">
-        <p id="quoteText" style="max-width:683px;"></p>
+        <p id="quoteText"></p>
         <textarea id="quoteInput" placeholder="Start typing here..." rows="4" cols="70" spellcheck="false"></textarea>
       </div>
       <button id="submitAnswer" style="margin-bottom:1rem;">Submit Answers</button>
