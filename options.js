@@ -1067,19 +1067,47 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function loadAnalytics() {
-    chrome.storage.local.get(['blockedCounts'], (data) => {
+    chrome.storage.local.get(['blockedCounts', 'unblockCounts'], (data) => {
       const blockedCounts = data.blockedCounts || {};
+      const unblockCounts = data.unblockCounts || {};
   
-      // Convert the blockedCounts object to an array for sorting
-      const blockedCountsArray = [];
+      const analyticsArray = [];
+      const seenKeys = new Set();
+      const missingUnblockCutoff = '2026-06-23';
+  
+      function makeKey(date, pattern) {
+        return `${date}|${pattern}`;
+      }
+  
       Object.keys(blockedCounts).forEach(date => {
         const countsForDate = blockedCounts[date];
         Object.keys(countsForDate).forEach(pattern => {
-          blockedCountsArray.push({
-            date: date,
-            pattern: pattern,
-            count: countsForDate[pattern]
+          const unblockValue = (unblockCounts[date] && Object.prototype.hasOwnProperty.call(unblockCounts[date], pattern))
+            ? unblockCounts[date][pattern]
+            : null;
+          analyticsArray.push({
+            date,
+            pattern,
+            blockCount: countsForDate[pattern],
+            unblockCount: unblockValue
           });
+          seenKeys.add(makeKey(date, pattern));
+        });
+      });
+  
+      Object.keys(unblockCounts).forEach(date => {
+        const countsForDate = unblockCounts[date];
+        Object.keys(countsForDate).forEach(pattern => {
+          const key = makeKey(date, pattern);
+          if (!seenKeys.has(key)) {
+            analyticsArray.push({
+              date,
+              pattern,
+              blockCount: 0,
+              unblockCount: countsForDate[pattern]
+            });
+            seenKeys.add(key);
+          }
         });
       });
   
@@ -1088,15 +1116,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return pattern.replace(/^www\./, '').replace(/^\\b/, '');
       }
   
-      // Sort the array by date in descending order, then by count in descending order, then by pattern ignoring "\b" and "www."
-      blockedCountsArray.sort((a, b) => {
+      // Sort the array by date in descending order, then by block count in descending order, then by pattern ignoring "\b" and "www."
+      analyticsArray.sort((a, b) => {
         const dateComparison = new Date(b.date) - new Date(a.date);
         if (dateComparison !== 0) return dateComparison;
   
-        const countComparison = b.count - a.count;
+        const countComparison = b.blockCount - a.blockCount;
         if (countComparison !== 0) return countComparison;
   
-        // Use getDisplayText and removeWww for the final pattern comparison
         const patternA = removeWwwB(getDisplayText(a.pattern));
         const patternB = removeWwwB(getDisplayText(b.pattern));
         return patternA.localeCompare(patternB);
@@ -1106,19 +1133,26 @@ document.addEventListener('DOMContentLoaded', () => {
       const tableBody = document.getElementById('analyticsTableBody');
       tableBody.innerHTML = '';
   
-      blockedCountsArray.forEach(entry => {
+      analyticsArray.forEach(entry => {
         const row = document.createElement('tr');
         const patternCell = document.createElement('td');
         const dateCell = document.createElement('td');
-        const countCell = document.createElement('td');
+        const blockCell = document.createElement('td');
+        const unblockCell = document.createElement('td');
   
         patternCell.textContent = getDisplayText(entry.pattern);
         dateCell.textContent = entry.date;
-        countCell.textContent = entry.count;
+        blockCell.textContent = entry.blockCount;
+        if (entry.unblockCount === null) {
+          unblockCell.textContent = entry.date < missingUnblockCutoff ? '?' : '0';
+        } else {
+          unblockCell.textContent = entry.unblockCount;
+        }
   
         row.appendChild(patternCell);
         row.appendChild(dateCell);
-        row.appendChild(countCell);
+        row.appendChild(blockCell);
+        row.appendChild(unblockCell);
         tableBody.appendChild(row);
       });
     });
