@@ -23,7 +23,7 @@ async function updateBlockCountForUrl(url) {
       } catch (e) {
         return false;
       }
-    }) || [url];
+    });
     const counts = matchingKeys.map(key => countsForToday[key] || 0);
 
     try {
@@ -32,6 +32,35 @@ async function updateBlockCountForUrl(url) {
         return obj;
       }, {});
       await setChromeStorage({ blockCount: blockCounts });
+    } catch (error) {
+      console.error('Error setting storage:', error);
+    }
+  });
+}
+
+async function updateUnblockCountForUrl(url) {
+  if (!url) return;
+  const today = getLocalDate();
+
+  chrome.storage.local.get(['unblockCounts'], async (data) => {
+    const unblockCounts = data.unblockCounts || {};
+    const countsForToday = unblockCounts[today] || {};
+    const matchingKeys = Object.keys(countsForToday).filter(k => {
+      try {
+        const regex = new RegExp(k);
+        return regex.test(url);
+      } catch (e) {
+        return false;
+      }
+    });
+    const counts = matchingKeys.map(key => countsForToday[key] || 0);
+
+    try {
+      const todayUnblockCounts = matchingKeys.reduce((obj, key, index) => {
+        obj[key] = counts[index];
+        return obj;
+      }, {});
+      await setChromeStorage({ unblockCount: todayUnblockCounts });
     } catch (error) {
       console.error('Error setting storage:', error);
     }
@@ -76,6 +105,7 @@ function isNightTime() {
 document.addEventListener('DOMContentLoaded', async () => {
   currentBlockedUrl = currentBlockedUrl || getBlockedUrlFromQuery();
   updateBlockCountForUrl(currentBlockedUrl);
+  updateUnblockCountForUrl(currentBlockedUrl);
   // Helper to show/hide navigation and display scriptures button
   function setScriptureNavigationVisibility(showNav, showDisplayBtn) {
     document.getElementById('previous').style.display = showNav ? 'inline-block' : 'none';
@@ -204,11 +234,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   setTimeout(() => {
-    chrome.storage.sync.get(['blockCount', 'enabled'], (data) => {
+    chrome.storage.sync.get(['blockCount', 'unblockCount', 'enabled'], (data) => {
       const blockCount = data.blockCount;
+      const unblockCount = data.unblockCount;
       const enabledSites = data.enabled || [];
       const blockCountMessage = document.getElementById('blockCountMessage');
+      const unblockCountMessage = document.getElementById('unblockCountMessage');
       blockCountMessage.innerHTML = '';
+      unblockCountMessage.innerHTML = '';
+
       if (blockCount) {
         const blockEntries = Object.entries(blockCount);
         const blockMessages = blockEntries
@@ -232,8 +266,45 @@ document.addEventListener('DOMContentLoaded', async () => {
         p.innerHTML = `Website Blocker has blocked ${joinedMessages} today.`;
         blockCountMessage.appendChild(p);
       }
-    });
-    if (currentBlockedUrl) {
+
+      if (unblockCount) {
+        const unblockEntries = Object.entries(unblockCount);
+        const unblockMessages = unblockEntries
+          .map(([pattern, count]) => {
+            const displayText = getDisplayText(pattern);
+            const times = (count === 1) ? 'once' : `${count} times`;
+            return `<b>${displayText}</b> was unblocked ${times}`;
+          });
+
+        if (unblockMessages.length > 0) {
+          let joinedMessages;
+          if (unblockMessages.length > 2) {
+            const lastMessage = unblockMessages.pop();
+            joinedMessages = unblockMessages.join(', ') + ', and ' + lastMessage;
+          } else if (unblockMessages.length === 2) {
+            const lastMessage = unblockMessages.pop();
+            joinedMessages = unblockMessages.join('') + ' and ' + lastMessage;
+          } else {
+            joinedMessages = unblockMessages.join('');
+          }
+          const p = document.createElement('p');
+          p.innerHTML = `${joinedMessages} today.`;
+          unblockCountMessage.appendChild(p);
+        } else if (currentBlockedUrl) {
+          const matchedPatterns = enabledSites.filter(pattern => new RegExp(pattern).test(currentBlockedUrl.toLowerCase()));
+          if (matchedPatterns.length > 0) {
+            const noAttemptMessages = matchedPatterns.map(pattern => {
+              const displayText = getDisplayText(pattern);
+              return `<b>${displayText}</b> has not been unblocked today.`;
+            });
+            const p = document.createElement('p');
+            p.innerHTML = noAttemptMessages.join(' ');
+            unblockCountMessage.appendChild(p);
+          }
+        }
+      }
+
+      if (currentBlockedUrl) {
       chrome.storage.sync.get(null, (data) => {
         const enabled = data.enabled || [];
         const matchedPatterns = enabled.filter(pattern => new RegExp(pattern).test(currentBlockedUrl.toLowerCase()));
@@ -245,6 +316,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       });
     }
+    });
     // Now run scripture logic
     if(enableScriptures) {
       document.getElementById("playback").style.display = "block";
@@ -586,6 +658,37 @@ document.addEventListener('DOMContentLoaded', async () => {
       let newEnabled = enabled.filter(enabledItem => !toUnblock.includes(enabledItem));
 
       await new Promise((resolve) => chrome.storage.sync.set({ enabled: newEnabled }, resolve));
+
+      if (toUnblock.length > 0) {
+        chrome.storage.local.get(['unblockCounts'], (data) => {
+          const today = getLocalDate();
+          let unblockCounts = data.unblockCounts || {};
+
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          const cutoffDate = thirtyDaysAgo.toISOString().split('T')[0];
+
+          unblockCounts = Object.fromEntries(
+            Object.entries(unblockCounts).filter(([date]) => date >= cutoffDate)
+          );
+
+          if (!unblockCounts[today]) {
+            unblockCounts[today] = {};
+          }
+
+          toUnblock.forEach(item => {
+            const key = item || currentBlockedUrl;
+            if (!unblockCounts[today][key]) {
+              unblockCounts[today][key] = 0;
+            }
+            unblockCounts[today][key]++;
+          });
+
+          chrome.storage.local.set({ unblockCounts }, () => {
+            updateUnblockCountForUrl(currentBlockedUrl);
+          });
+        });
+      }
 
       if (!isNaN(duration) && duration > 0 && duration <= 1440 && canTempUnblock) {
         chrome.runtime.sendMessage({
