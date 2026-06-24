@@ -523,10 +523,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  function redirectToNextDailyGoal(fallback) {
+  function redirectToNextDailyGoal(fallback, messageLink) {
     resetDailyGoalsIfNeeded(() => chrome.storage.sync.get(['dailyGoals'], (data) => {
       const nextGoal = getNextDailyGoal(data.dailyGoals || []);
-      if (nextGoal && nextGoal.url) {
+      if (messageLink) {
+        smartRedirect(messageLink);
+      } else if (nextGoal && nextGoal.url) {
         smartRedirect(nextGoal.url);
       } else {
         fallback();
@@ -601,7 +603,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       adjustDailyGoalColumnWidths();
       const nextGoal = getNextDailyGoal(dailyGoals);
-      closeButton.innerText = nextGoal && nextGoal.url ? '➡️ Go to Next Habit' : '🔒 Close Tab';
+      closeButton.innerText = nextGoal && nextGoal.url ? '➡️ Go to Next Habit' : (data.messageLink ? '➡️ Go to Next Habit' : '🔒 Close Tab');
     }));
   }
 
@@ -739,6 +741,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Hide block count message
     document.getElementById("productiveUrls").style.display = "none";
     document.getElementById("blockCountMessage").style.display = "none";
+    document.getElementById("unblockCountMessage").style.display = "none";
     document.getElementById("durationText").style.display = "none";
     document.getElementById("playback").style.display = "none";
   }
@@ -842,7 +845,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function remainFocused() {
-    chrome.storage.sync.get(['focusOption', 'redirectUrl', 'enableMessage', 'message', 'dailyGoals'], (data) => {
+    chrome.storage.sync.get(['focusOption', 'redirectUrl', 'enableMessage', 'message', 'messageLink', 'dailyGoals'], (data) => {
       const hasDailyGoals = (data.dailyGoals || []).length > 0;
       if(data.enableMessage || isHardMode || hasDailyGoals) {
         document.querySelector(".default-buttons").style.display = "none";
@@ -852,9 +855,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelector(".message-buttons").style.display = "block";
         document.querySelector("p").innerHTML = isHardMode ? "You win this battle one decision at a time. Don’t forget that." : "";
         document.getElementById("blockCountMessage").innerHTML = "";
+        document.getElementById("unblockCountMessage").style.display = "none";
         document.getElementById("durationText").innerHTML = "";
-        document.getElementById("message").innerHTML = isHardMode ? "Good. You made the right choice." : 
-        data.message !== undefined ? data.message : "You can do it! Stay focused!";
+
+        const messageText = isHardMode ? "Good. You made the right choice." :
+          data.message !== undefined ? data.message : "You can do it! Stay focused!";
+        setMessageWithOptionalLink(messageText, data.messageLink || '');
         renderDailyGoals();
       } else if (data.focusOption === "redirect") {
         smartRedirect(data.redirectUrl);
@@ -1031,30 +1037,87 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Error in showTimeInput:', error);
     }
   })
+
+  function setMessageWithOptionalLink(message, messageLink) {
+    const messageElement = document.getElementById('message');
+    messageElement.onclick = null;
+    messageElement.style.cursor = '';
+
+    if (messageLink) {
+      messageElement.innerHTML = '';
+      const anchor = document.createElement('a');
+      anchor.href = '#';
+      anchor.textContent = message;
+      anchor.style.color = 'inherit';
+      anchor.style.textDecoration = 'underline';
+      anchor.addEventListener('click', (event) => {
+        event.preventDefault();
+        try {
+          chrome.tabs.create({ url: messageLink });
+        } catch (error) {
+          console.error('Error opening message link:', error);
+        }
+      });
+      messageElement.appendChild(anchor);
+      messageElement.style.cursor = 'pointer';
+    } else {
+      messageElement.textContent = message;
+    }
+  }
+
   document.getElementById('editMessageButton').addEventListener('click', () => {
     try {
-      let message = prompt("What would you like the message to say?");
-      if(message !== undefined) {
-        message = message.trim();
-        if(message !== "") {
-          chrome.storage.sync.set({message});
-          document.getElementById("message").innerHTML = message;
+      let message = prompt('What would you like the message to say?');
+      if (message === undefined) {
+        return;
+      }
+      message = message.trim();
+      if (message === '') {
+        resetMessage();
+        return;
+      }
+
+      let messageLink = prompt('Optional: enter a URL for the message link (leave blank for no link).');
+      if (messageLink === undefined) messageLink = '';
+      messageLink = messageLink.trim();
+
+      let storedMessageLink = '';
+      if (messageLink) {
+        try {
+          const parsed = new URL(messageLink);
+          if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+            storedMessageLink = messageLink;
+          } else {
+            alert('The message link is not valid. Only http:// and https:// URLs are accepted. The message will still be saved.');
+          }
+        } catch (error) {
+          alert('The message link is not valid. Only http:// and https:// URLs are accepted. The message will still be saved.');
         }
       }
+
+      chrome.storage.sync.set({ message, messageLink: storedMessageLink });
+      setMessageWithOptionalLink(message, storedMessageLink);
     } catch (error) {
       console.error('Error in editMessageButton:', error);
     }
   });
+
+  function resetMessage() {
+    const resetMessageText = "You can do it! Stay focused!";
+    chrome.storage.sync.set({ message: resetMessageText, messageLink: '' });
+    setMessageWithOptionalLink(resetMessageText, '');
+  }
+
   document.getElementById('closeButton').addEventListener('click', () => {
     try {
-      chrome.storage.sync.get(['focusOption', 'redirectUrl', 'enableMessage', 'message'], (data) => {
+      chrome.storage.sync.get(['focusOption', 'redirectUrl', 'enableMessage', 'message', 'messageLink'], (data) => {
         redirectToNextDailyGoal(() => {
           if (data.focusOption === "redirect") {
             smartRedirect(data.redirectUrl);
           } else {
             closeTab();
           }
-        });
+        }, data.messageLink);
       });
     } catch (error) {
       console.error('Error in closeButton:', error)

@@ -107,6 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const redirectField = document.getElementById('redirectPage');
   const displayMessage = document.getElementById('messageCheckbox');
   const messageField = document.getElementById('message');
+  const messageLinkField = document.getElementById('messageLink');
   const notiReblock = document.getElementById('enableNotifications');
   const scriptures = document.getElementById('scriptures');
   const ubEnableVerse = document.getElementById('ubEnableVerse');
@@ -120,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
   chrome.storage.sync.get(['blocked', 'enabled', 'favorites', 'hardMode', 'blockerEnabled',
   'blockedPageBgColor', 'enableConfirmMessage', 'enableReasonInput', 'enableUbButtonDisabling', 'ubDisableDuration', 
   'enableTimeInput', 'enableTempUnblocking', 'enableNightMode', 'enableTempUbOptions', 'enableTempUbPopup', 'unblockDuration', 'saveBlockedUrls',
-  'focusOption', 'redirectUrl', 'enableMessage', 'message', 'enableNotiReblock',
+  'focusOption', 'redirectUrl', 'enableMessage', 'message', 'messageLink', 'enableNotiReblock',
   'enableScriptures', 'requireVerse', 'allowUbReminder'], (data) => {
     const blocked = data.blocked || [];
     const enabled = data.enabled || [];
@@ -244,6 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
     redirectField.value = data.redirectUrl !== undefined ? data.redirectUrl : "";
     displayMessage.checked = data.enableMessage !== undefined ? data.enableMessage : false;
     messageField.value = data.message !== undefined ? data.message : "You can do it! Stay focused!";
+    messageLinkField.value = data.messageLink !== undefined ? data.messageLink : "";
     notiReblock.checked = data.enableNotiReblock !== undefined ? data.enableNotiReblock : false;
     scriptures.checked = data.enableScriptures !== undefined ? data.enableScriptures : false;
     ubEnableVerse.checked = data.requireVerse !== undefined ? data.requireVerse : false;
@@ -357,7 +359,18 @@ document.addEventListener('DOMContentLoaded', () => {
     ubEnableVerse.disabled = !scriptures.checked ? true : false;
     ubReminder.disabled = !scriptures.checked ? true : false;
     messageField.disabled = !displayMessage.checked ? true : false;
+    messageLinkField.disabled = !displayMessage.checked ? true : false;
     saveOptions();
+  }
+
+  function isValidHttpUrl(value) {
+    if (!value) return false;
+    try {
+      const url = new URL(value);
+      return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch (error) {
+      return false;
+    }
   }
 
   function toggleFocusField() {
@@ -367,8 +380,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function resetMessage() {
     const resetMessage = "You can do it! Stay focused!"
-    chrome.storage.sync.set({ message: resetMessage });
+    chrome.storage.sync.set({ message: resetMessage, messageLink: '' });
     messageField.value = resetMessage;
+    messageLinkField.value = '';
   }
 
   function saveOptions() {
@@ -388,13 +402,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const redirectUrl = redirectField.value;
     const enableMessage = displayMessage.checked;
     const message = messageField.value;
+    const messageLink = messageLinkField.value.trim();
     const enableNotiReblock = notiReblock.checked;
     const enableScriptures = scriptures.checked;
     const requireVerse = ubEnableVerse.disabled ? false : ubEnableVerse.checked;
     const allowUbReminder = ubReminder.checked;
+    const storedMessageLink = isValidHttpUrl(messageLink) ? messageLink : '';
+    if (messageLink && !storedMessageLink) {
+      alert('The message link is not valid. Only http:// and https:// URLs are accepted. The message has been saved without a link.');
+    }
     chrome.storage.sync.set({ blockedPageBgColor, enableConfirmMessage, enableReasonInput, enableUbButtonDisabling, ubDisableDuration, 
       enableTimeInput, enableTempUnblocking, enableNightMode, enableTempUbOptions, enableTempUbPopup, unblockDuration, saveBlockedUrls,
-      focusOption, redirectUrl, enableMessage, message, enableNotiReblock,
+      focusOption, redirectUrl, enableMessage, message, messageLink: storedMessageLink, enableNotiReblock,
       enableScriptures, requireVerse, allowUbReminder });
   }
 

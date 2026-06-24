@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const toggleBlockerButton = document.getElementById('toggleBlocker');
   const openOptionsButton = document.getElementById('openOptions');
+  const habitTrackerButton = document.getElementById('habitTracker');
   const openHelpButton = document.getElementById('openHelp');
   const blockStatusHeading = document.getElementById('blockStatus');
   const blockedList = document.getElementById('blockedSitesList');
@@ -76,6 +77,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   openOptionsButton.addEventListener('click', () => {
     chrome.runtime.openOptionsPage();
+  });
+  habitTrackerButton.addEventListener('click', () => {
+    const optionsUrl = chrome.runtime.getURL('options.html');
+    chrome.tabs.query({}, (tabs) => {
+      const optionsTab = tabs.find(tab => tab.url === optionsUrl);
+      if (optionsTab) {
+        chrome.tabs.update(optionsTab.id, { active: true }, () => {
+          chrome.tabs.sendMessage(optionsTab.id, { action: 'openDailyGoals' });
+        });
+      } else {
+        chrome.storage.sync.set({ openTab: 'DailyGoals' }, () => {
+          chrome.runtime.openOptionsPage();
+        });
+      }
+    });
   });
 
   openHelpButton.addEventListener('click', () => {
