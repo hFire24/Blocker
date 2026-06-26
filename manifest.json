@@ -5,6 +5,7 @@
   "description": "A simple website blocker.",
   "permissions": [
     "tabs",
+    "webNavigation",
     "storage",
     "alarms",
     "notifications"

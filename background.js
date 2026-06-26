@@ -93,6 +93,121 @@ function initDailyState() {
 chrome.runtime.onStartup.addListener(initDailyState);
 chrome.runtime.onInstalled.addListener(initDailyState);
 
+function isBlockableNavigationUrl(url) {
+  if (!url || url.startsWith(chrome.runtime.getURL("blocked.html"))) {
+    return false;
+  }
+
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
+  } catch (e) {
+    return false;
+  }
+}
+
+function getMatchingPatterns(patterns, lowercaseUrl) {
+  return patterns.filter(pattern => {
+    try {
+      const regex = new RegExp(pattern);
+      return regex.test(lowercaseUrl);
+    } catch (e) {
+      console.error('Invalid regex pattern:', pattern);
+      return false;
+    }
+  });
+}
+
+function recordBlockedAttempt(fullUrl, matchingEnabledItems, callback) {
+  chrome.storage.local.get(['blockedCounts'], (data) => {
+    const today = getLocalDate();
+    let blockedCounts = data.blockedCounts || {};
+
+    // Remove entries older than 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const cutoffDate = thirtyDaysAgo.toISOString().split('T')[0];
+
+    blockedCounts = Object.fromEntries(
+      Object.entries(blockedCounts).filter(([date]) => date >= cutoffDate)
+    );
+
+    // Add new block counts
+    if (!blockedCounts[today]) {
+      blockedCounts[today] = {};
+    }
+
+    matchingEnabledItems.forEach(item => {
+      const key = item || fullUrl;
+      if (!blockedCounts[today][key]) {
+        blockedCounts[today][key] = 0;
+      }
+      blockedCounts[today][key]++;
+    });
+
+    chrome.storage.local.set({ blockedCounts }, callback);
+  });
+}
+
+function clearDisabledBlockTimestamps(matchingBlockedItems, matchingEnabledItems, blockerEnabled) {
+  matchingBlockedItems.forEach(item => {
+    chrome.storage.sync.remove(`blockedTimestamp_${getDisplayText(item)}`);
+  });
+
+  matchingEnabledItems.forEach(item => {
+    if (!blockerEnabled) {
+      chrome.storage.sync.get(['toTimestampWhenEnabled'], (data) => {
+        const toTimestampWhenEnabled = data.toTimestampWhenEnabled || [];
+        if (!toTimestampWhenEnabled.includes(item)) {
+          toTimestampWhenEnabled.push(item);
+          chrome.storage.sync.set({ toTimestampWhenEnabled });
+        }
+      });
+    }
+  });
+}
+
+function redirectToBlockedPage(tabId, fullUrl) {
+  const blockedUrl = `${chrome.runtime.getURL("blocked.html")}?blockedUrl=${encodeURIComponent(fullUrl)}`;
+  chrome.tabs.update(tabId, { url: blockedUrl });
+}
+
+function handleBlockedNavigation(tabId, fullUrl) {
+  if (tabId < 0 || !isBlockableNavigationUrl(fullUrl)) {
+    return;
+  }
+
+  chrome.storage.sync.get(['blocked', 'enabled', 'blockerEnabled'], (data) => {
+    const blocked = data.blocked || [];
+    const enabled = data.enabled || [];
+    const blockerEnabled = data.blockerEnabled !== false; // default to true if not set
+    const lowercaseUrl = fullUrl.toLowerCase();
+
+    const matchingBlockedItems = getMatchingPatterns(blocked, lowercaseUrl);
+    if (matchingBlockedItems.length === 0) {
+      return;
+    }
+
+    const matchingEnabledItems = getMatchingPatterns(enabled, lowercaseUrl);
+
+    if (blockerEnabled && matchingEnabledItems.length > 0) {
+      recordBlockedAttempt(fullUrl, matchingEnabledItems, () => {
+        redirectToBlockedPage(tabId, fullUrl);
+      });
+    } else {
+      clearDisabledBlockTimestamps(matchingBlockedItems, matchingEnabledItems, blockerEnabled);
+    }
+  });
+}
+
+chrome.webNavigation.onBeforeNavigate.addListener((details) => {
+  if (details.frameId !== 0) {
+    return;
+  }
+
+  handleBlockedNavigation(details.tabId, details.url);
+});
+
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url && tab.url.startsWith(chrome.runtime.getURL("blocked.html"))) {
     let blockedUrl = null;
@@ -106,96 +221,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (blockedUrl) {
       chrome.tabs.sendMessage(tabId, { action: 'setBlockedUrl', url: blockedUrl });
     }
-  } else if (changeInfo.status === 'loading' && tab.url) {
-    chrome.storage.sync.get(['blocked', 'enabled', 'blockerEnabled', 'saveBlockedUrls'], (data) => {
-      const blocked = data.blocked || [];
-      const enabled = data.enabled || [];
-      const blockerEnabled = data.blockerEnabled !== false; // default to true if not set
-      const saveBlockedUrls = data.saveBlockedUrls !== false; // default to true if not set
-      const fullUrl = tab.url;
-      const lowercaseUrl = fullUrl.toLowerCase();
-
-      const isBlocked = blocked.some(blockedItem => {
-        try {
-          const regex = new RegExp(blockedItem);
-          return regex.test(lowercaseUrl);
-        } catch (e) {
-          console.error('Invalid regex pattern:', blockedItem);
-          return false;
-        }
-      });
-
-      const matchingEnabledItems = enabled.filter(enabledItem => {
-        try {
-          const regex = new RegExp(enabledItem);
-          return regex.test(lowercaseUrl);
-        } catch (e) {
-          console.error('Invalid regex pattern:', enabledItem);
-          return false;
-        }
-      });
-
-      if (blockerEnabled && isBlocked && matchingEnabledItems.length > 0) {
-        chrome.storage.local.get(['blockedCounts'], (data) => {
-          const today = getLocalDate();
-          let blockedCounts = data.blockedCounts || {};
-
-          // Remove entries older than 30 days
-          const thirtyDaysAgo = new Date();
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-          const cutoffDate = thirtyDaysAgo.toISOString().split('T')[0];
-
-          blockedCounts = Object.fromEntries(
-            Object.entries(blockedCounts).filter(([date]) => date >= cutoffDate)
-          );
-
-          // Add new block counts
-          if (!blockedCounts[today]) {
-            blockedCounts[today] = {};
-          }
-
-          matchingEnabledItems.forEach(item => {
-            const key = item || fullUrl;
-            if (!blockedCounts[today][key]) {
-              blockedCounts[today][key] = 0;
-            }
-            blockedCounts[today][key]++;
-          });
-
-          chrome.storage.local.set({ blockedCounts }, () => {
-            const blockedUrl = `${chrome.runtime.getURL("blocked.html")}?blockedUrl=${encodeURIComponent(fullUrl)}`;
-            chrome.tabs.update(tabId, { url: blockedUrl });
-          });
-        });
-      } else if (isBlocked && !(matchingEnabledItems.length > 0 && blockerEnabled)) {
-        // Delete the blockedTimestamp item
-        const matchingBlockedItems = blocked.filter(blockedItem => {
-          try {
-            const regex = new RegExp(blockedItem);
-            return regex.test(lowercaseUrl);
-          } catch (e) {
-            console.error('Invalid regex pattern:', blockedItem);
-            return false;
-          }
-        });
-
-        matchingBlockedItems.forEach(item => {
-          chrome.storage.sync.remove(`blockedTimestamp_${getDisplayText(item)}`);
-        });
-
-        matchingEnabledItems.forEach(item => {
-          if(!blockerEnabled) {
-            chrome.storage.sync.get(['toTimestampWhenEnabled'], (data) => {
-              const toTimestampWhenEnabled = data.toTimestampWhenEnabled || [];
-              if (!toTimestampWhenEnabled.includes(item)) {
-                toTimestampWhenEnabled.push(item);
-                chrome.storage.sync.set({ toTimestampWhenEnabled });
-              }
-            });
-          }
-        });
-      }
-    });
   }
 });
 
