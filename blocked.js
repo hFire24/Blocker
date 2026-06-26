@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (isHardMode) {
       document.getElementById("message").innerText = "Access Denied";
-      document.getElementById("verse").innerHTML = `You are <i>not</i> going to that website. It reinforces unhealthy behavioral patterns that should be avoided.`;
+      document.getElementById("verse").innerHTML = "This site has extra protection enabled. Complete the unblock challenge if you want to continue.";
     }
       
     enableConfirmMessage = isHardMode ? true : data.enableConfirmMessage !== false;
@@ -679,7 +679,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             toUnblock.push(blockedItem);
           }
         } catch (e) {
-          console.error('Invalid regex pattern:', blockedItem);
+          console.error('Invalid regex pattern');
         }
       });
 
@@ -760,8 +760,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelector('.message-buttons').style.display = 'none';
 
     // Show the night mode message
-    document.getElementById("message").innerText = "Enough.";
-    document.getElementById("verse").innerHTML = "You tried to unblock this website during nighttime hours. You should spend this time winding down and going to bed instead.";
+    document.getElementById("message").innerText = "Night Mode Active";
+    document.getElementById("verse").innerHTML = "Hard-mode unblocking is paused during nighttime hours. You can return when night mode ends.";
     document.querySelector('.night-buttons').style.display = 'block';
 
     // Hide block count message
@@ -879,13 +879,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelector(".challenge").style.display = "none";
         document.getElementById("playback").style.display = "none";
         document.querySelector(".message-buttons").style.display = "block";
-        document.querySelector("p").innerHTML = isHardMode ? "You win this battle one decision at a time. Don’t forget that." : "";
+        document.querySelector("p").innerHTML = "";
         document.getElementById("blockCountMessage").innerHTML = "";
         document.getElementById("unblockCountMessage").style.display = "none";
         document.getElementById("durationText").innerHTML = "";
 
-        const messageText = isHardMode ? "Good. You made the right choice." :
-          data.message !== undefined ? data.message : "You can do it! Stay focused!";
+        const messageText = data.message !== undefined ? data.message : "You can do it! Stay focused!";
         setMessageWithOptionalLink(messageText, data.messageLink || '');
         renderDailyGoals();
       } else if (data.focusOption === "redirect") {
@@ -941,8 +940,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       const userAnswer = document.getElementById("challengeAnswer").value.trim();
       const challengeText = document.getElementById("challengeQuestion").innerText.replace(/’/g, "'");
-      console.log(userAnswer);
-      console.log(challengeText);
       const feedbackElem = document.getElementById("challengeFeedback");
       if (userAnswer !== challengeText) {
         feedbackElem.innerText = "That doesn't match. Please try again.";

@@ -45,7 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
       chrome.storage.sync.get(['favorites', 'enabled', 'hardMode', 'blocked'], (data) => {
         updateBlockedList(!blockerEnabled, data.favorites || [], data.enabled || [], data.hardMode || []);
         updateCurrentSiteStatus(!blockerEnabled, data.blocked || [], data.enabled || []);
-        console.log(blockerEnabled ? "BLOCKER DISABLED" : "BLOCKER ENABLED");
         if(blockerEnabled) {
           chrome.alarms.clearAll(() => {
             chrome.storage.sync.get(null, (items) => {
@@ -55,8 +54,6 @@ document.addEventListener('DOMContentLoaded', () => {
               chrome.storage.sync.remove(keysToRemove, () => {
                 if (chrome.runtime.lastError) {
                   console.error(chrome.runtime.lastError);
-                } else {
-                  console.log(`Removed keys: ${keysToRemove}`);
                 }
               });
             });
@@ -127,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const regex = new RegExp(blockedItem);
           return regex.test(url);
         } catch (e) {
-          console.error('Invalid regex pattern:', blockedItem);
+          console.error('Invalid regex pattern');
           return false;
         }
       });
@@ -237,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const regex = new RegExp(pattern);
             return regex.test(activeUrl);
           } catch (e) {
-            console.error('Invalid regex pattern:', pattern);
+            console.error('Invalid regex pattern');
             return false;
           }
         });
@@ -323,7 +320,6 @@ document.addEventListener('DOMContentLoaded', () => {
           const alarmName = `reblock_${displayPattern}`;
           chrome.alarms.clear(alarmName, (wasCleared) => {
             if (wasCleared) {
-              console.log(`Cleared ${alarmName}`);
               chrome.storage.sync.remove(alarmName);
             }
           });

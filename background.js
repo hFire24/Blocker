@@ -120,7 +120,7 @@ function getMatchingPatterns(patterns, lowercaseUrl) {
       const regex = new RegExp(pattern);
       return regex.test(lowercaseUrl);
     } catch (e) {
-      console.error('Invalid regex pattern:', pattern);
+      console.error('Invalid regex pattern');
       return false;
     }
   });
@@ -152,7 +152,7 @@ function checkDeclarativeRegexSupport(pattern) {
       }
 
       if (!result.isSupported) {
-        console.error('Regex is not supported by declarative blocking:', pattern, result.reason);
+        console.error('Regex is not supported by declarative blocking:', result.reason);
       }
 
       resolve(result.isSupported);
@@ -190,7 +190,7 @@ async function buildDeclarativeBlockRules(patterns) {
       });
       installedPatterns.push(pattern);
     } catch (e) {
-      console.error('Invalid regex pattern:', pattern);
+      console.error('Invalid regex pattern');
     }
   }
 
@@ -452,9 +452,7 @@ function saveBlockedUrl(url, patterns, reason) {
       savedUrls[today].push({ url, patterns, reason });
     }
 
-    chrome.storage.local.set({ savedUrls }, () => {
-      console.log('Saved URLs updated', savedUrls); // For debugging
-    });
+    chrome.storage.local.set({ savedUrls });
   });
 }
 
@@ -508,7 +506,6 @@ function scheduleReblock(url, duration, itemsToReblock) {
 
       // Save the reblock details
       chrome.storage.sync.set({ [alarmName]: { url, item } });
-      console.log(`Scheduled reblock for ${item} in ${duration} minutes.`);
     });
   });
 }
@@ -531,7 +528,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
               const regex = new RegExp(blockedItem);
               return regex.test(url);
             } catch (e) {
-              console.error('Invalid regex pattern:', blockedItem);
+              console.error('Invalid regex pattern');
               return false;
             }
           });
@@ -540,7 +537,6 @@ chrome.alarms.onAlarm.addListener((alarm) => {
             // Add the temporarily unblocked item back to the enabled array
             const updatedEnabled = [...currentEnabled, item];
             chrome.storage.sync.set({ enabled: updatedEnabled, [`blockedTimestamp_${getDisplayText(item)}`]: Date.now() }, () => {
-              console.log(`Reblocked item: ${item}`);
               refreshDeclarativeBlockRules();
             });
             const now = Date.now();

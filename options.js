@@ -189,7 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
       switch(challenge) {
         case 'math':
           const answers = Array.from(document.getElementsByClassName('answer-input')).map(input => parseInt(input.value));
-          console.log(answers, correctAnswers);
           const allCorrect = answers.length === correctAnswers.length && answers.every((ans, idx) => ans === correctAnswers[idx]);
           if (allCorrect) {
             document.getElementById('challengeText').innerText = 'If you want to access the sites tab or import data, you will need to type the following quote exactly as it appears.';
@@ -317,8 +316,6 @@ document.addEventListener('DOMContentLoaded', () => {
           chrome.storage.sync.remove(keysToRemove, () => {
             if (chrome.runtime.lastError) {
               console.error(chrome.runtime.lastError);
-            } else {
-              console.log(`Removed keys: ${keysToRemove}`);
             }
           });
         });
@@ -619,7 +616,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function deleteAlarm(alarmName) {
     chrome.alarms.clear(alarmName, (wasCleared) => {
       if (wasCleared) {
-        console.log(`Cleared ${alarmName}`);
         chrome.storage.sync.remove(alarmName);
       }
     });
@@ -835,9 +831,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       favorites.sort((a, b) => newBlocked.indexOf(a) - newBlocked.indexOf(b));
 
-      chrome.storage.sync.set({ blocked: newBlocked, enabled, favorites }, () => {
-        console.log('Blocked list order updated');
-      });
+      chrome.storage.sync.set({ blocked: newBlocked, enabled, favorites });
     });
   }
 
@@ -1054,7 +1048,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const dailyGoals = data.dailyGoals || [];
       dailyGoals.sort((a, b) => orderedGoalIds.indexOf(a.id) - orderedGoalIds.indexOf(b.id));
       chrome.storage.sync.set({ dailyGoals }, () => {
-        console.log('Habit order updated');
         adjustDailyGoalColumnWidths();
       });
     });
@@ -1379,9 +1372,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Save to chrome.storage.sync
-    chrome.storage.sync.set({ productiveSites: productiveSitesArray }, () => {
-      console.log('Productive sites saved:', productiveSitesArray);
-    });
+    chrome.storage.sync.set({ productiveSites: productiveSitesArray });
 
     adjustColumnWidths();
   }
@@ -1430,7 +1421,6 @@ document.addEventListener('DOMContentLoaded', () => {
     Array.from(productiveSitesList.children).forEach(li => {
       li.style.gridTemplateColumns = `20px ${longestUrl}px ${longestName}px auto`;
     });
-    console.log(longestUrl + ' ' + longestName);
   }
   
   function getTextWidth(text, font) {
@@ -1474,12 +1464,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = JSON.parse(e.target.result);
       if (data.sync) {
         chrome.storage.sync.set(data.sync, () => {
-          console.log('Sync data imported');
+          alert('Sync data imported');
         });
       }
       if (data.local) {
         chrome.storage.local.set(data.local, () => {
-          console.log('Local data imported');
+          alert('Local data imported');
         });
       }
     };

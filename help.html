@@ -4,12 +4,34 @@
   <title>Help - Website Blocker</title>
   <meta charset="UTF-8">
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; font-size: 1rem; }
-    h1, h2, p, ul { margin-bottom: 15px; }
+    body {
+      color: #222;
+      font-family: Arial, sans-serif;
+      font-size: 1rem;
+      line-height: 1.5;
+      margin: 20px;
+      max-width: 920px;
+    }
+    h1, h2, h3, p, ul { margin-bottom: 15px; }
+    h2 { border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+    code { background: #f4f4f4; padding: 2px 4px; }
     .font-size-options { margin-bottom: 20px; }
-    .toc { margin-bottom: 20px; }
-    .font-size-button { border: 1px solid #ccc; padding: 5px 10px; cursor: pointer; margin-right: 10px; }
-    .font-size-button.selected { background-color: #007bff; color: #fff; }
+    .toc { margin-bottom: 24px; }
+    .font-size-button {
+      border: 1px solid #ccc;
+      cursor: pointer;
+      margin-right: 10px;
+      padding: 5px 10px;
+    }
+    .font-size-button.selected {
+      background-color: #007bff;
+      color: #fff;
+    }
+    .note {
+      background: #f8f9fa;
+      border-left: 4px solid #007bff;
+      padding: 10px 12px;
+    }
   </style>
 </head>
 <body>
@@ -25,74 +47,118 @@
   <div class="toc">
     <h2>Table of Contents</h2>
     <ul>
-      <li><a href="#blocking-urls">Blocking URLs</a></li>
-      <li><a href="#types-of-blocks">Types of Blocks</a></li>
-      <li><a href="#unblocking-urls">Unblocking URLs</a></li>
-      <li><a href="#toggling-the-blocker">Toggling the Blocker</a></li>
-      <li><a href="#sites-tab">Sites Tab</a></li>
-      <li><a href="#examples">Examples</a></li>
-      <li><a href="#options-page">Options Page</a></li>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#quick-start">Quick Start</a></li>
+      <li><a href="#access-tab">Grant Access</a></li>
+      <li><a href="#sites-tab">Sites</a></li>
+      <li><a href="#blocked-page">Blocked Page</a></li>
+      <li><a href="#popup">Popup</a></li>
+      <li><a href="#blocking-options">Blocking Options</a></li>
+      <li><a href="#analytics">Analytics and Saved URLs</a></li>
+      <li><a href="#habit-tracker">Habit Tracker</a></li>
+      <li><a href="#productive-urls">Productive URLs</a></li>
+      <li><a href="#import-export">Import and Export</a></li>
+      <li><a href="#privacy">Privacy Notes</a></li>
     </ul>
   </div>
 
-  <h2 id="blocking-urls">Blocking URLs</h2>
-  <p>To block a URL, follow these steps:</p>
+  <h2 id="overview">Overview</h2>
+  <p>Website Blocker helps you limit distracting websites and search terms. It can block sites immediately, track block and unblock activity, temporarily unblock a site, redirect you toward useful alternatives, and show habit goals when you choose to remain focused.</p>
+  <p>The extension has three main areas: the popup, the blocked page, and the options page. The popup is for quick actions. The blocked page appears when a site is blocked. The options page is where you manage rules, settings, analytics, saved URLs, habits, and import/export.</p>
+
+  <h2 id="quick-start">Quick Start</h2>
+  <p>To start blocking a website or search term:</p>
   <ul>
     <li>Go to the <a href="options.html" target="_blank">Options page</a>.</li>
-    <li>Enter the URL or keyword you want to block in the input box.</li>
-    <li>Click the "Add" button to add the URL or keyword to the blocked list.</li>
+    <li>Open the <strong>Sites</strong> tab. If access is locked, complete the challenge in the <strong>Grant Access</strong> tab first.</li>
+    <li>Enter a website such as <code>example.com</code> or a search keyword such as <code>games</code>.</li>
+    <li>Click <strong>Add</strong>.</li>
+    <li>Leave the checkbox enabled for items you want actively blocked.</li>
   </ul>
 
-  <h2 id="types-of-blocks">Types of Blocks</h2>
-  <p>There are two types of blocks:</p>
+  <h2 id="access-tab">Grant Access</h2>
+  <p>The <strong>Grant Access</strong> tab protects sensitive actions when hard mode is active. If one or more enabled items are in hard mode, you must solve math problems and then type a quote before opening the Sites tab or importing data.</p>
+  <p>Options, Analytics, Saved URLs, Habit Tracker, and Productive URLs remain available without the access challenge.</p>
+
+  <h2 id="sites-tab">Sites</h2>
+  <p>The <strong>Sites</strong> tab manages blocked websites and search terms.</p>
   <ul>
-    <li><strong>Website 🌐:</strong> This option blocks specific websites. For example, to block <code>example.com</code>, it will be converted to a pattern that matches URLs like <code>https://example.com</code>.</li>
-    <li><strong>Keyword 🔍:</strong> This option blocks search queries containing specific keywords. For example, to block searches containing the word "example", it will be converted to a pattern that matches URLs like <code>search?q=example</code> or <code>search_query=example</code>.</li>
+    <li><strong>Website rules</strong> match sites such as <code>example.com</code>.</li>
+    <li><strong>Keyword rules</strong> match search query parameters such as <code>q=example</code>, <code>s=example</code>, or <code>search_query=example</code>.</li>
+    <li><strong>Checkboxes</strong> turn individual rules on or off.</li>
+    <li><strong>Stars</strong> add rules to the popup for faster access.</li>
+    <li><strong>Easy/Hard</strong> controls how strict a rule is. Hard mode adds extra friction before disabling or unblocking.</li>
+    <li><strong>Edit</strong> changes an existing rule.</li>
+    <li><strong>Delete</strong> removes a rule.</li>
+    <li><strong>Drag handles</strong> reorder rules.</li>
   </ul>
 
-  <h2 id="unblocking-urls">Unblocking URLs</h2>
-  <p>To unblock a URL or keyword, there are three ways:</p>
+  <h2 id="blocked-page">Blocked Page</h2>
+  <p>The blocked page appears when an enabled rule matches the page you are trying to visit. Depending on your settings, it can show block counts, unblock counts, a reason input, a confirmation step, a time selector, productive URLs, habit goals, and scripture verses.</p>
   <ul>
-    <li><strong>From the Popup:</strong> Open the extension popup, find the URL or keyword in the list, and uncheck the checkbox next to it to disable it. Note that the URL or keyword needs to be starred to appear in the popup.</li>
-    <li><strong>From the Sites Page:</strong> Go to the <a href="options.html" target="_blank">Options page</a>, find the URL or keyword in the list, and uncheck the checkbox next to it to disable it, or click the "Delete" button to remove it from the list entirely.</li>
-    <li><strong>From the Blocked Page:</strong> When a website is blocked, you will see a blocked page. Click the "Unblock and Continue" button on this page to disable all URLs and keywords that caused the block. Upon doing so, you will be redirected to the page that was originally blocked.</li>
+    <li><strong>Unblock Site</strong> disables the matching rule or temporarily unblocks it, depending on your settings.</li>
+    <li><strong>Give Reason</strong> lets you record why you wanted to visit the site when reason input is enabled.</li>
+    <li><strong>Remain Focused</strong> closes the tab, redirects to a saved page, displays your custom message, or shows habits and productive links.</li>
+    <li><strong>Hard mode</strong> requires a quote challenge before temporary unblocking. Night mode can also prevent hard-mode unblocking between 9PM and 4AM.</li>
   </ul>
 
-  <h2 id="toggling-the-blocker">Toggling the Blocker</h2>
-  <p>You can enable or disable the blocker from the popup:</p>
+  <h2 id="popup">Popup</h2>
+  <p>The popup gives quick access to common actions.</p>
   <ul>
-    <li>Click the "Enable Blocker" or "Disable Blocker" button to toggle the blocker status.</li>
-    <li>The current status of the blocker (ENABLED or DISABLED) will be displayed at the top of the popup.</li>
+    <li><strong>Enable Blocker / Disable Blocker</strong> toggles the entire extension. If hard-mode items are enabled, disabling the blocker opens a challenge page first.</li>
+    <li><strong>Options</strong> opens the options page.</li>
+    <li><strong>Habit Tracker</strong> opens the Daily Goals section.</li>
+    <li><strong>Help</strong> opens this page.</li>
+    <li>Starred site rules appear in the popup so you can quickly enable or disable them.</li>
+    <li>If the current tab is temporarily unblocked, the popup can show when it will be reblocked and provide a <strong>Reblock This Website</strong> button.</li>
   </ul>
 
-  <h2 id="sites-tab">Sites Tab</h2>
-  <p>You can manage your blocked URLs and keywords from the <a href="options.html" target="_blank">Options page</a> in the sites tab:</p>
+  <h2 id="blocking-options">Blocking Options</h2>
+  <p>The <strong>Options</strong> tab customizes how blocking and unblocking behave.</p>
   <ul>
-    <li>Use the input box and dropdown menu to add new blocks.</li>
-    <li>Use the drag handle ☰ to reorder existing blocks.</li>
-    <li>Click on the <span class="star">★</span> to add or remove the block to the popup.</li>
-    <li>Use the checkboxes to enable or disable existing blocks.</li>
-    <li>Use the "Edit" button to edit URLs or keywords.</li>
-    <li>Use the "Delete" button to remove blocks.</li>
+    <li><strong>Blocked page background color</strong> changes the blocked page color.</li>
+    <li><strong>Reason input</strong> asks why you are visiting a blocked page.</li>
+    <li><strong>Disable unblock button</strong> delays the unblock button for a chosen number of seconds.</li>
+    <li><strong>Time input</strong> asks how long a site should stay unblocked.</li>
+    <li><strong>Confirm message</strong> adds a final confirmation before unblocking.</li>
+    <li><strong>Temporary unblocking</strong> automatically reblocks a rule after the selected duration.</li>
+    <li><strong>Night mode</strong> prevents hard-mode unblocking between 9PM and 4AM.</li>
+    <li><strong>Save blocked URLs</strong> controls whether blocked URLs are saved always, only when a reason is given, or never.</li>
+    <li><strong>When tab is closed</strong> chooses whether Remain Focused closes the tab or redirects to another page.</li>
+    <li><strong>Display message</strong> shows a custom message after Remain Focused is pressed. You can also attach an optional link.</li>
+    <li><strong>Reblocking notifications</strong> can notify you when a temporarily unblocked rule is reblocked.</li>
+    <li><strong>Scripture verses</strong> can show verses on the blocked page and optionally require reading progress before unblocking.</li>
   </ul>
 
-  <h2 id="examples">Examples</h2>
-  <p>Here are some examples of patterns you can use:</p>
+  <h2 id="analytics">Analytics and Saved URLs</h2>
+  <p>The <strong>Analytics</strong> tab shows block and unblock counts by item and date. This can help you see which rules are triggered most often.</p>
+  <p>The <strong>Saved URLs</strong> tab lists blocked URLs that were saved according to your Save Blocked URLs setting. Saved entries include the URL, matching items, date, and reasons. Saved URLs older than 30 days are permanently deleted.</p>
+
+  <h2 id="habit-tracker">Habit Tracker</h2>
+  <p>The <strong>Habit Tracker</strong> lets you define daily habits. Each habit can have an optional URL. When you choose Remain Focused on the blocked page, your habits can appear there. Closing that screen can send you to the first unfinished habit that has a URL.</p>
   <ul>
-    <li><strong>Block the website example.com:</strong> Enter <code>example.com</code> and select <strong>Website</strong>.</li>
-    <li><strong>Block all search queries containing the word "example":</strong> Enter <code>example</code> and select <strong>Keyword</strong>.</li>
+    <li>Use <strong>Add</strong> to create a habit.</li>
+    <li>Check a habit when it is complete for the day.</li>
+    <li>Use <strong>Edit</strong>, <strong>Delete</strong>, and drag handles to maintain the list.</li>
+    <li>Daily completion resets automatically on a new local date.</li>
   </ul>
 
-  <h2 id="options-page">Options Tab</h2>
-  <p>You can adjust how the Blocking page works in the Options tab.</p>
-  <p>The Remain Focused Button can also be changed.</p>
+  <h2 id="productive-urls">Productive URLs</h2>
+  <p>The <strong>Productive URLs</strong> tab manages links shown after choosing Remain Focused. Use it for study sites, task lists, documentation, courses, or any page that helps you redirect attention.</p>
   <ul>
-    <li><strong>Close Tab: </strong> The blocked page gets closed.</li>
-    <li><strong>Redirect to Page:</strong> You can enter in a URL, and you will be redriected to that URL. You can use it to be redirected to a productive site like your to-do list or habit tracker.</li>
-    <li><strong>Display Message:</strong> You can enter in a message. The message can be anything, including a motivational message/quote or a reminder of a goal/task.</li>
+    <li>Productive URLs must start with <code>https://</code>.</li>
+    <li>Each URL can have a display name.</li>
+    <li>You can edit, delete, and reorder productive URLs.</li>
+    <li>Random display order can be enabled from this tab.</li>
   </ul>
 
-  <p>If you have any questions or need further assistance, please contact support.</p>
+  <h2 id="import-export">Import and Export</h2>
+  <p>The <strong>Import/Export</strong> tab lets you back up or restore extension data. Export downloads a JSON file containing sync and local storage data. Import restores data from a previously exported file.</p>
+  <p class="note">Import is protected by the Grant Access challenge when hard-mode items are active.</p>
+
+  <h2 id="privacy">Privacy Notes</h2>
+  <p>Website Blocker uses browser extension storage for rules, settings, analytics, saved URLs, reasons, habits, and productive links. Saved URLs and reasons can contain sensitive browsing information, so review the Saved URLs tab and exported JSON files before sharing them.</p>
+  <p>Use <strong>Delete All</strong> in Saved URLs to clear saved URL history. Saved URLs older than 30 days are also deleted automatically.</p>
 
   <script src="fontSize.js"></script>
 </body>
