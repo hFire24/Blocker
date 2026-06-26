@@ -212,7 +212,7 @@ const procrastQuotes = [//Anti-procrastination quotes 1-10 from https://web.arch
 '“One of the most tragic things I know about human nature is that all of us tend to put off living. We are all dreaming of some magical rose garden over the horizon – instead of enjoying the roses blooming outside our windows today.” – Dale Carnegie',
 '“Don’t put off for tomorrow what you can do today because if you enjoy it today, you can do it again tomorrow.” – James A. Michener',
 '“Perhaps the most valuable result of an education is the ability to make yourself do the thing you have to do, when it ought to be done, whether you like it or not.” – Thomas Huxley',
-'“Waiting is a trap. There will always be reasons to wait – The truth is, there are only two things in life, reasons and results, and reasons simply don’t count.” – Robert Anthony',
+'“Waiting is a trap. There will always be reasons to wait. The truth is, there are only two things in life, reasons and results, and reasons simply don’t count.” – Robert Anthony',
 '“My advice is to never do tomorrow what you can do today. Procrastination is the thief of time.” – Charles Dickens',
 '“Often just by taking action, by doing something about the situation can relieve the stress and help correct the situation.” – Catherine Pulsifer',
 '“To do anything in this world worth doing, we must not stand back shivering and thinking of the cold and danger, but jump in and scramble through as well as we can.” – Sydney Smith',

@@ -6,13 +6,27 @@
   "permissions": [
     "tabs",
     "webNavigation",
+    "declarativeNetRequest",
     "storage",
     "alarms",
     "notifications"
   ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "background": {
     "service_worker": "background.js"
   },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "blocked.html"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

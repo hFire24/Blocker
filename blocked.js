@@ -9,6 +9,32 @@ function getBlockedUrlFromQuery() {
   }
 }
 
+function getPendingBlockedUrl() {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({ action: 'getPendingBlockedUrl' }, (response) => {
+      if (chrome.runtime.lastError) {
+        resolve('');
+        return;
+      }
+
+      resolve((response && response.url) || '');
+    });
+  });
+}
+
+function setEnabledAndRefreshRules(enabled) {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({ action: 'setEnabledAndRefreshRules', enabled }, () => {
+      if (chrome.runtime.lastError) {
+        chrome.storage.sync.set({ enabled }, resolve);
+        return;
+      }
+
+      resolve();
+    });
+  });
+}
+
 async function updateBlockCountForUrl(url) {
   if (!url) return;
   const today = getLocalDate();
@@ -103,7 +129,7 @@ function isNightTime() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  currentBlockedUrl = currentBlockedUrl || getBlockedUrlFromQuery();
+  currentBlockedUrl = currentBlockedUrl || getBlockedUrlFromQuery() || await getPendingBlockedUrl();
   updateBlockCountForUrl(currentBlockedUrl);
   updateUnblockCountForUrl(currentBlockedUrl);
   // Helper to show/hide navigation and display scriptures button
@@ -659,7 +685,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       let newEnabled = enabled.filter(enabledItem => !toUnblock.includes(enabledItem));
 
-      await new Promise((resolve) => chrome.storage.sync.set({ enabled: newEnabled }, resolve));
+      await setEnabledAndRefreshRules(newEnabled);
 
       if (toUnblock.length > 0) {
         chrome.storage.local.get(['unblockCounts'], (data) => {

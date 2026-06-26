@@ -1,5 +1,12 @@
 const ICON_SIZES = [16, 32, 48, 128];
+const DNR_RULE_ID_START = 1000;
+const MAX_DNR_REGEX_RULES = 500;
 let cachedActionIcons = null;
+const pendingBlockedUrlsByTab = new Map();
+let installedDeclarativeBlockPatterns = new Set();
+let declarativeRuleRefreshInProgress = false;
+let declarativeRuleRefreshQueued = false;
+let declarativeRuleRefreshCallbacks = [];
 
 async function loadBaseIconBitmap() {
   const response = await fetch(chrome.runtime.getURL('icon48.png'));
@@ -92,6 +99,7 @@ function initDailyState() {
 
 chrome.runtime.onStartup.addListener(initDailyState);
 chrome.runtime.onInstalled.addListener(initDailyState);
+refreshDeclarativeBlockRules();
 
 function isBlockableNavigationUrl(url) {
   if (!url || url.startsWith(chrome.runtime.getURL("blocked.html"))) {
@@ -116,6 +124,154 @@ function getMatchingPatterns(patterns, lowercaseUrl) {
       return false;
     }
   });
+}
+
+function getActiveBlockPatterns({ blocked = [], enabled = [], blockerEnabled = true }) {
+  if (blockerEnabled === false) {
+    return [];
+  }
+
+  return enabled.filter(pattern => blocked.includes(pattern));
+}
+
+function checkDeclarativeRegexSupport(pattern) {
+  return new Promise((resolve) => {
+    if (!chrome.declarativeNetRequest.isRegexSupported) {
+      resolve(true);
+      return;
+    }
+
+    chrome.declarativeNetRequest.isRegexSupported({
+      regex: pattern,
+      isCaseSensitive: false
+    }, (result) => {
+      if (chrome.runtime.lastError) {
+        console.error('Failed to check regex support:', chrome.runtime.lastError.message);
+        resolve(false);
+        return;
+      }
+
+      if (!result.isSupported) {
+        console.error('Regex is not supported by declarative blocking:', pattern, result.reason);
+      }
+
+      resolve(result.isSupported);
+    });
+  });
+}
+
+async function buildDeclarativeBlockRules(patterns) {
+  const rules = [];
+  const installedPatterns = [];
+
+  for (const pattern of patterns.slice(0, MAX_DNR_REGEX_RULES)) {
+    try {
+      new RegExp(pattern);
+
+      const isSupported = await checkDeclarativeRegexSupport(pattern);
+      if (!isSupported) {
+        continue;
+      }
+
+      rules.push({
+        id: DNR_RULE_ID_START + rules.length,
+        priority: 1,
+        action: {
+          type: 'redirect',
+          redirect: {
+            extensionPath: '/blocked.html'
+          }
+        },
+        condition: {
+          regexFilter: pattern,
+          isUrlFilterCaseSensitive: false,
+          resourceTypes: ['main_frame']
+        }
+      });
+      installedPatterns.push(pattern);
+    } catch (e) {
+      console.error('Invalid regex pattern:', pattern);
+    }
+  }
+
+  return { rules, installedPatterns };
+}
+
+function finishDeclarativeRuleRefresh() {
+  declarativeRuleRefreshInProgress = false;
+
+  if (declarativeRuleRefreshQueued) {
+    declarativeRuleRefreshQueued = false;
+    runDeclarativeBlockRuleRefresh();
+    return;
+  }
+
+  const callbacks = declarativeRuleRefreshCallbacks;
+  declarativeRuleRefreshCallbacks = [];
+  callbacks.forEach(callback => callback());
+}
+
+function runDeclarativeBlockRuleRefresh() {
+  declarativeRuleRefreshInProgress = true;
+
+  if (!chrome.declarativeNetRequest) {
+    installedDeclarativeBlockPatterns = new Set();
+    finishDeclarativeRuleRefresh();
+    return;
+  }
+
+  chrome.storage.sync.get(['blocked', 'enabled', 'blockerEnabled'], (data) => {
+    buildDeclarativeBlockRules(getActiveBlockPatterns({
+      blocked: data.blocked || [],
+      enabled: data.enabled || [],
+      blockerEnabled: data.blockerEnabled !== false
+    })).then(({ rules, installedPatterns }) => {
+
+      chrome.declarativeNetRequest.getDynamicRules((existingRules) => {
+        if (chrome.runtime.lastError) {
+          console.error('Failed to read blocking rules:', chrome.runtime.lastError.message);
+          installedDeclarativeBlockPatterns = new Set();
+          finishDeclarativeRuleRefresh();
+          return;
+        }
+
+        const removeRuleIds = existingRules
+          .filter(rule => rule.id >= DNR_RULE_ID_START && rule.id < DNR_RULE_ID_START + MAX_DNR_REGEX_RULES)
+          .map(rule => rule.id);
+
+        chrome.declarativeNetRequest.updateDynamicRules({
+          removeRuleIds,
+          addRules: rules
+        }, () => {
+          if (chrome.runtime.lastError) {
+            console.error('Failed to update blocking rules:', chrome.runtime.lastError.message);
+            installedDeclarativeBlockPatterns = new Set();
+          } else {
+            installedDeclarativeBlockPatterns = new Set(installedPatterns);
+          }
+
+          finishDeclarativeRuleRefresh();
+        });
+      });
+    }).catch((error) => {
+      console.error('Failed to build blocking rules:', error);
+      installedDeclarativeBlockPatterns = new Set();
+      finishDeclarativeRuleRefresh();
+    });
+  });
+}
+
+function refreshDeclarativeBlockRules(callback) {
+  if (callback) {
+    declarativeRuleRefreshCallbacks.push(callback);
+  }
+
+  if (declarativeRuleRefreshInProgress) {
+    declarativeRuleRefreshQueued = true;
+    return;
+  }
+
+  runDeclarativeBlockRuleRefresh();
 }
 
 function recordBlockedAttempt(fullUrl, matchingEnabledItems, callback) {
@@ -168,8 +324,25 @@ function clearDisabledBlockTimestamps(matchingBlockedItems, matchingEnabledItems
 }
 
 function redirectToBlockedPage(tabId, fullUrl) {
+  pendingBlockedUrlsByTab.set(tabId, fullUrl);
   const blockedUrl = `${chrome.runtime.getURL("blocked.html")}?blockedUrl=${encodeURIComponent(fullUrl)}`;
   chrome.tabs.update(tabId, { url: blockedUrl });
+}
+
+function redirectToBlockedPageIfNeeded(tabId, fullUrl) {
+  setTimeout(() => {
+    chrome.tabs.get(tabId, (tab) => {
+      if (chrome.runtime.lastError || !tab || !tab.url) {
+        return;
+      }
+
+      if (tab.url.startsWith(chrome.runtime.getURL("blocked.html"))) {
+        return;
+      }
+
+      redirectToBlockedPage(tabId, fullUrl);
+    });
+  }, 150);
 }
 
 function handleBlockedNavigation(tabId, fullUrl) {
@@ -191,8 +364,12 @@ function handleBlockedNavigation(tabId, fullUrl) {
     const matchingEnabledItems = getMatchingPatterns(enabled, lowercaseUrl);
 
     if (blockerEnabled && matchingEnabledItems.length > 0) {
+      pendingBlockedUrlsByTab.set(tabId, fullUrl);
       recordBlockedAttempt(fullUrl, matchingEnabledItems, () => {
-        redirectToBlockedPage(tabId, fullUrl);
+        const hasDeclarativeRule = matchingEnabledItems.some(item => installedDeclarativeBlockPatterns.has(item));
+        if (!hasDeclarativeRule) {
+          redirectToBlockedPageIfNeeded(tabId, fullUrl);
+        }
       });
     } else {
       clearDisabledBlockTimestamps(matchingBlockedItems, matchingEnabledItems, blockerEnabled);
@@ -218,15 +395,26 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       blockedUrl = null;
     }
 
+    if (!blockedUrl) {
+      blockedUrl = pendingBlockedUrlsByTab.get(tabId) || null;
+    }
+
     if (blockedUrl) {
       chrome.tabs.sendMessage(tabId, { action: 'setBlockedUrl', url: blockedUrl });
+      pendingBlockedUrlsByTab.delete(tabId);
     }
   }
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === 'sync' && changes.blockerEnabled) {
-    applyActionIcon(changes.blockerEnabled.newValue !== false);
+  if (areaName === 'sync') {
+    if (changes.blockerEnabled) {
+      applyActionIcon(changes.blockerEnabled.newValue !== false);
+    }
+
+    if (changes.blocked || changes.enabled || changes.blockerEnabled) {
+      refreshDeclarativeBlockRules();
+    }
   }
 });
 
@@ -290,6 +478,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   } else if (message.action === 'resetDailyGoals') {
     resetDailyGoalsIfNeeded(sendResponse);
     return true;
+  } else if (message.action === 'getPendingBlockedUrl') {
+    const tabId = sender.tab && sender.tab.id;
+    const url = tabId !== undefined ? (pendingBlockedUrlsByTab.get(tabId) || '') : '';
+    if (tabId !== undefined) {
+      pendingBlockedUrlsByTab.delete(tabId);
+    }
+    sendResponse({
+      url
+    });
+  } else if (message.action === 'setEnabledAndRefreshRules') {
+    chrome.storage.sync.set({ enabled: message.enabled || [] }, () => {
+      refreshDeclarativeBlockRules(() => {
+        sendResponse();
+      });
+    });
+    return true;
   }
 });
 
@@ -337,6 +541,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
             const updatedEnabled = [...currentEnabled, item];
             chrome.storage.sync.set({ enabled: updatedEnabled, [`blockedTimestamp_${getDisplayText(item)}`]: Date.now() }, () => {
               console.log(`Reblocked item: ${item}`);
+              refreshDeclarativeBlockRules();
             });
             const now = Date.now();
             const alarmTime = alarm.scheduledTime;
