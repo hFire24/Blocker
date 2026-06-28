@@ -119,15 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      const matchingBlocked = blocked.filter(blockedItem => {
-        try {
-          const regex = new RegExp(blockedItem);
-          return regex.test(url);
-        } catch (e) {
-          console.error('Invalid regex pattern');
-          return false;
-        }
-      });
+      const matchingBlocked = blocked.filter(blockedItem => doesPatternMatchUrl(blockedItem, url));
 
       if (matchingBlocked.length === 0) {
         currentSiteSection.style.display = 'none';
@@ -229,15 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
         const activeUrl = activeTab.url.toLowerCase();
-        const shouldClose = patterns.some(pattern => {
-          try {
-            const regex = new RegExp(pattern);
-            return regex.test(activeUrl);
-          } catch (e) {
-            console.error('Invalid regex pattern');
-            return false;
-          }
-        });
+        const shouldClose = patterns.some(pattern => doesPatternMatchUrl(pattern, activeUrl));
         if (shouldClose) {
           chrome.tabs.remove(activeTab.id);
         } else {
@@ -266,15 +250,49 @@ document.addEventListener('DOMContentLoaded', () => {
   function getDisplayText(pattern) {
     let displayText = pattern;
     if (pattern.startsWith('^https?://')) {
-      displayText = displayText.replace("^https?://+([^:/]+\\.)?", '');
-      displayText = displayText.replace(/\\./g, '.');
-      displayText = displayText.replace("[:/]", '');
+      const websiteDomain = getWebsiteDomainFromPattern(pattern);
+      displayText = websiteDomain || displayText;
     } else if (pattern.startsWith('(?:q|s|search_query)=')) {
       displayText = displayText.replace("(?:q|s|search_query)=(.*", '');
       displayText = displayText.replace("[^&]*)", '');
     }
     return displayText;
   }  
+
+  function getWebsiteDomainFromPattern(pattern) {
+    if (!pattern.startsWith('^https?://')) {
+      return null;
+    }
+
+    let domainPart = pattern
+      .replace(/^\^https\?:\/\/\+\(\[\^:\/\]\+\\\.\)\?/, '')
+      .replace(/^\^https\?:\/\/\(\[\^\/\?#\]\*\\\.\)\?/, '')
+      .replace(/\[:\/\]$/, '')
+      .replace(/\(\[\/:\?#\]\|\$\)$/, '')
+      .replace(/\\\./g, '.');
+
+    return domainPart || null;
+  }
+
+  function doesPatternMatchUrl(pattern, lowercaseUrl) {
+    const websiteDomain = getWebsiteDomainFromPattern(pattern);
+    if (websiteDomain) {
+      try {
+        const hostname = new URL(lowercaseUrl).hostname;
+        return hostname === websiteDomain || hostname.endsWith(`.${websiteDomain}`);
+      } catch (e) {
+        return false;
+      }
+    }
+
+    try {
+      const regex = new RegExp(pattern);
+      return regex.test(lowercaseUrl);
+    } catch (e) {
+      console.error('Invalid regex pattern');
+      return false;
+    }
+  }
 
   function addListItem(pattern, isEnabled) {
     const listItem = document.createElement('li');

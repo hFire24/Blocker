@@ -3,7 +3,21 @@ let currentBlockedUrl = null;
 function getBlockedUrlFromQuery() {
   try {
     const param = new URLSearchParams(window.location.search).get('blockedUrl');
-    return param || '';
+    if (param) {
+      return param;
+    }
+
+    const hashPrefix = '#blockedUrl=';
+    if (window.location.hash.startsWith(hashPrefix)) {
+      const hashUrl = window.location.hash.slice(hashPrefix.length);
+      try {
+        return decodeURIComponent(hashUrl);
+      } catch (e) {
+        return hashUrl;
+      }
+    }
+
+    return '';
   } catch (e) {
     return '';
   }
@@ -35,8 +49,46 @@ function setEnabledAndRefreshRules(enabled) {
   });
 }
 
+function getWebsiteDomainFromPattern(pattern) {
+  if (!pattern.startsWith('^https?://')) {
+    return null;
+  }
+
+  let domainPart = pattern
+    .replace(/^\^https\?:\/\/\+\(\[\^:\/\]\+\\\.\)\?/, '')
+    .replace(/^\^https\?:\/\/\(\[\^\/\?#\]\*\\\.\)\?/, '')
+    .replace(/\[:\/\]$/, '')
+    .replace(/\(\[\/:\?#\]\|\$\)$/, '')
+    .replace(/\\\./g, '.');
+
+  return domainPart || null;
+}
+
+function doesPatternMatchUrl(pattern, lowercaseUrl) {
+  const websiteDomain = getWebsiteDomainFromPattern(pattern);
+  if (websiteDomain) {
+    try {
+      const hostname = new URL(lowercaseUrl).hostname;
+      return hostname === websiteDomain || hostname.endsWith(`.${websiteDomain}`);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  try {
+    const regex = new RegExp(pattern);
+    return regex.test(lowercaseUrl);
+  } catch (e) {
+    console.error('Invalid regex pattern');
+    return false;
+  }
+}
+
 async function updateBlockCountForUrl(url) {
-  if (!url) return;
+  if (!url) {
+    await setChromeStorage({ blockCount: {} });
+    return;
+  }
   const today = getLocalDate();
 
   chrome.storage.local.get(['blockedCounts'], async (data) => {
@@ -44,8 +96,7 @@ async function updateBlockCountForUrl(url) {
     const countsForToday = blockedCounts[today] || {};
     const matchingKeys = Object.keys(countsForToday).filter(k => {
       try {
-        const regex = new RegExp(k);
-        return regex.test(url);
+        return doesPatternMatchUrl(k, url.toLowerCase());
       } catch (e) {
         return false;
       }
@@ -65,7 +116,10 @@ async function updateBlockCountForUrl(url) {
 }
 
 async function updateUnblockCountForUrl(url) {
-  if (!url) return;
+  if (!url) {
+    await setChromeStorage({ unblockCount: {} });
+    return;
+  }
   const today = getLocalDate();
 
   chrome.storage.local.get(['unblockCounts'], async (data) => {
@@ -73,8 +127,7 @@ async function updateUnblockCountForUrl(url) {
     const countsForToday = unblockCounts[today] || {};
     const matchingKeys = Object.keys(countsForToday).filter(k => {
       try {
-        const regex = new RegExp(k);
-        return regex.test(url);
+        return doesPatternMatchUrl(k, url.toLowerCase());
       } catch (e) {
         return false;
       }
@@ -186,7 +239,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const enabledSites = data.enabled || [];
     if (currentBlockedUrl) {
       const matchedPatterns = enabledSites.filter(pattern =>
-        new RegExp(pattern).test(currentBlockedUrl.toLowerCase())
+        doesPatternMatchUrl(pattern, currentBlockedUrl.toLowerCase())
       );
       if (matchedPatterns.some(p => hardModeSites.includes(p))) {
         isHardMode = true;
@@ -269,7 +322,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       blockCountMessage.innerHTML = '';
       unblockCountMessage.innerHTML = '';
 
-      if (blockCount) {
+      if (blockCount && Object.keys(blockCount).length > 0) {
         const blockEntries = Object.entries(blockCount);
         const blockMessages = blockEntries
           .filter(([pattern]) => enabledSites.includes(pattern))
@@ -317,7 +370,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           p.innerHTML = `${joinedMessages} today.`;
           unblockCountMessage.appendChild(p);
         } else if (currentBlockedUrl) {
-          const matchedPatterns = enabledSites.filter(pattern => new RegExp(pattern).test(currentBlockedUrl.toLowerCase()));
+          const matchedPatterns = enabledSites.filter(pattern => doesPatternMatchUrl(pattern, currentBlockedUrl.toLowerCase()));
           if (matchedPatterns.length > 0) {
             const noAttemptMessages = matchedPatterns.map(pattern => {
               const displayText = getDisplayText(pattern);
@@ -333,7 +386,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (currentBlockedUrl) {
       chrome.storage.sync.get(null, (data) => {
         const enabled = data.enabled || [];
-        const matchedPatterns = enabled.filter(pattern => new RegExp(pattern).test(currentBlockedUrl.toLowerCase()));
+        const matchedPatterns = enabled.filter(pattern => doesPatternMatchUrl(pattern, currentBlockedUrl.toLowerCase()));
         if (matchedPatterns.length > 0) {
           const timestamps = matchedPatterns.map(pattern => data[`blockedTimestamp_${getDisplayText(pattern)}`]);
           const durations = timestamps.map(timestamp => timestamp ? getBlockingDuration(timestamp) : "a while");
@@ -466,9 +519,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   function getDisplayText(pattern) {
     let displayText = pattern;
     if (pattern.startsWith('^https?://')) {
-      displayText = displayText.replace("^https?://+([^:/]+\\.)?", '');
-      displayText = displayText.replace(/\\./g, '.');
-      displayText = displayText.replace("[:/]", '');
+      const websiteDomain = getWebsiteDomainFromPattern(pattern);
+      displayText = websiteDomain || displayText;
     } else if (pattern.startsWith('(?:q|s|search_query)=')) {
       displayText = displayText.replace("(?:q|s|search_query)=(.*", '');
       displayText = displayText.replace("[^&]*)", '');
@@ -476,10 +528,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     return displayText;
   }
 
+  function getWebsiteDomainFromPattern(pattern) {
+    if (!pattern.startsWith('^https?://')) {
+      return null;
+    }
+
+    let domainPart = pattern
+      .replace(/^\^https\?:\/\/\+\(\[\^:\/\]\+\\\.\)\?/, '')
+      .replace(/^\^https\?:\/\/\(\[\^\/\?#\]\*\\\.\)\?/, '')
+      .replace(/\[:\/\]$/, '')
+      .replace(/\(\[\/:\?#\]\|\$\)$/, '')
+      .replace(/\\\./g, '.');
+
+    return domainPart || null;
+  }
+
+  function doesPatternMatchUrl(pattern, lowercaseUrl) {
+    const websiteDomain = getWebsiteDomainFromPattern(pattern);
+    if (websiteDomain) {
+      try {
+        const hostname = new URL(lowercaseUrl).hostname;
+        return hostname === websiteDomain || hostname.endsWith(`.${websiteDomain}`);
+      } catch (e) {
+        return false;
+      }
+    }
+
+    try {
+      const regex = new RegExp(pattern);
+      return regex.test(lowercaseUrl);
+    } catch (e) {
+      console.error('Invalid regex pattern');
+      return false;
+    }
+  }
+
   const saveUrl = () => {
     if (!currentBlockedUrl) return;
     chrome.storage.sync.get('enabled', (data) => {
-      const patterns = data.enabled.filter(pattern => new RegExp(pattern).test(currentBlockedUrl.toLowerCase()));
+      const patterns = data.enabled.filter(pattern => doesPatternMatchUrl(pattern, currentBlockedUrl.toLowerCase()));
       chrome.runtime.sendMessage({ action: 'saveBlockedUrl', url: currentBlockedUrl, patterns, reason });
     });
   };
@@ -674,8 +761,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       blocked.forEach(blockedItem => {
         try {
-          const regex = new RegExp(blockedItem);
-          if (regex.test(currentBlockedUrl.toLowerCase()) && enabled.includes(blockedItem)) {
+          if (doesPatternMatchUrl(blockedItem, currentBlockedUrl.toLowerCase()) && enabled.includes(blockedItem)) {
             toUnblock.push(blockedItem);
           }
         } catch (e) {

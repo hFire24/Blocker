@@ -433,7 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function formatPattern(pattern, type) {
     if (type === 'website') {
-      pattern = `^https?://+([^:/]+\\.)?${escapePattern(pattern)}[:/]`;
+      pattern = `^https?://([^/?#]*\\.)?${escapePattern(pattern)}([/:?#]|$)`;
     } else if (type === 'keyword') {
       pattern = `(?:q|s|search_query)=(.*${escapePattern(pattern)}[^&]*)`;
     }
@@ -442,6 +442,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function escapePattern(input) {
     return input.replace(/\./g, '\\.').replace(/ /g, '+');
+  }
+
+  function getWebsiteDomainFromPattern(pattern) {
+    if (!pattern.startsWith('^https?://')) {
+      return null;
+    }
+
+    let domainPart = pattern
+      .replace(/^\^https\?:\/\/\+\(\[\^:\/\]\+\\\.\)\?/, '')
+      .replace(/^\^https\?:\/\/\(\[\^\/\?#\]\*\\\.\)\?/, '')
+      .replace(/\[:\/\]$/, '')
+      .replace(/\(\[\/:\?#\]\|\$\)$/, '')
+      .replace(/\\\./g, '.');
+
+    return domainPart || null;
   }
 
   function isPatternTooBroad(pattern) {
@@ -478,9 +493,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function getDisplayText(pattern) {
     let displayText = pattern;
     if (pattern.startsWith('^https?://')) {
-      displayText = displayText.replace("^https?://+([^:/]+\\.)?", '');
-      displayText = displayText.replace(/\\./g, '.');
-      displayText = displayText.replace("[:/]", '');
+      const websiteDomain = getWebsiteDomainFromPattern(pattern);
+      displayText = websiteDomain || displayText;
     } else if (pattern.startsWith('(?:q|s|search_query)=')) {
       displayText = displayText.replace("(?:q|s|search_query)=(.*", '');
       displayText = displayText.replace("[^&]*)", '');

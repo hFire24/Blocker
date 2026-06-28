@@ -1,6 +1,7 @@
 const ICON_SIZES = [16, 32, 48, 128];
 const DNR_RULE_ID_START = 1000;
 const MAX_DNR_REGEX_RULES = 500;
+const PENDING_BLOCKED_URL_TTL_MS = 30000;
 let cachedActionIcons = null;
 const pendingBlockedUrlsByTab = new Map();
 let installedDeclarativeBlockPatterns = new Set();
@@ -116,14 +117,90 @@ function isBlockableNavigationUrl(url) {
 
 function getMatchingPatterns(patterns, lowercaseUrl) {
   return patterns.filter(pattern => {
+    return doesPatternMatchUrl(pattern, lowercaseUrl);
+  });
+}
+
+function setPendingBlockedUrl(tabId, url) {
+  pendingBlockedUrlsByTab.set(tabId, {
+    url,
+    timestamp: Date.now()
+  });
+}
+
+function takePendingBlockedUrl(tabId) {
+  const pending = pendingBlockedUrlsByTab.get(tabId);
+  pendingBlockedUrlsByTab.delete(tabId);
+
+  if (!pending) {
+    return '';
+  }
+
+  const url = typeof pending === 'string' ? pending : pending.url;
+  const timestamp = typeof pending === 'string' ? 0 : pending.timestamp;
+
+  if (!url || !timestamp || Date.now() - timestamp > PENDING_BLOCKED_URL_TTL_MS) {
+    return '';
+  }
+
+  return url;
+}
+
+function getWebsiteDomainFromPattern(pattern) {
+  if (!pattern.startsWith('^https?://')) {
+    return null;
+  }
+
+  let domainPart = pattern
+    .replace(/^\^https\?:\/\/\+\(\[\^:\/\]\+\\\.\)\?/, '')
+    .replace(/^\^https\?:\/\/\(\[\^\/\?#\]\*\\\.\)\?/, '')
+    .replace(/\[:\/\]$/, '')
+    .replace(/\(\[\/:\?#\]\|\$\)$/, '')
+    .replace(/\\\./g, '.');
+
+  return domainPart || null;
+}
+
+function doesPatternMatchUrl(pattern, lowercaseUrl) {
+  const websiteDomain = getWebsiteDomainFromPattern(pattern);
+  if (websiteDomain) {
     try {
-      const regex = new RegExp(pattern);
-      return regex.test(lowercaseUrl);
+      const hostname = new URL(lowercaseUrl).hostname;
+      return hostname === websiteDomain || hostname.endsWith(`.${websiteDomain}`);
     } catch (e) {
-      console.error('Invalid regex pattern');
       return false;
     }
-  });
+  }
+
+  try {
+    const regex = new RegExp(pattern);
+    return regex.test(lowercaseUrl);
+  } catch (e) {
+    console.error('Invalid regex pattern');
+    return false;
+  }
+}
+
+function getDeclarativeRegexForPattern(pattern) {
+  const websiteDomain = getWebsiteDomainFromPattern(pattern);
+  if (!websiteDomain) {
+    return pattern;
+  }
+
+  const escapedDomain = websiteDomain.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return `^(https?://(?:[^/?#]*\\.)?${escapedDomain}(?:[/:?#].*)?)$`;
+}
+
+function getDeclarativeRedirectForPattern(pattern) {
+  if (getWebsiteDomainFromPattern(pattern)) {
+    return {
+      regexSubstitution: `${chrome.runtime.getURL('blocked.html')}#blockedUrl=\\1`
+    };
+  }
+
+  return {
+    extensionPath: '/blocked.html'
+  };
 }
 
 function getActiveBlockPatterns({ blocked = [], enabled = [], blockerEnabled = true }) {
@@ -166,9 +243,10 @@ async function buildDeclarativeBlockRules(patterns) {
 
   for (const pattern of patterns.slice(0, MAX_DNR_REGEX_RULES)) {
     try {
-      new RegExp(pattern);
+      const regexFilter = getDeclarativeRegexForPattern(pattern);
+      new RegExp(regexFilter);
 
-      const isSupported = await checkDeclarativeRegexSupport(pattern);
+      const isSupported = await checkDeclarativeRegexSupport(regexFilter);
       if (!isSupported) {
         continue;
       }
@@ -178,12 +256,10 @@ async function buildDeclarativeBlockRules(patterns) {
         priority: 1,
         action: {
           type: 'redirect',
-          redirect: {
-            extensionPath: '/blocked.html'
-          }
+          redirect: getDeclarativeRedirectForPattern(pattern)
         },
         condition: {
-          regexFilter: pattern,
+          regexFilter,
           isUrlFilterCaseSensitive: false,
           resourceTypes: ['main_frame']
         }
@@ -324,7 +400,7 @@ function clearDisabledBlockTimestamps(matchingBlockedItems, matchingEnabledItems
 }
 
 function redirectToBlockedPage(tabId, fullUrl) {
-  pendingBlockedUrlsByTab.set(tabId, fullUrl);
+  setPendingBlockedUrl(tabId, fullUrl);
   const blockedUrl = `${chrome.runtime.getURL("blocked.html")}?blockedUrl=${encodeURIComponent(fullUrl)}`;
   chrome.tabs.update(tabId, { url: blockedUrl });
 }
@@ -358,13 +434,14 @@ function handleBlockedNavigation(tabId, fullUrl) {
 
     const matchingBlockedItems = getMatchingPatterns(blocked, lowercaseUrl);
     if (matchingBlockedItems.length === 0) {
+      pendingBlockedUrlsByTab.delete(tabId);
       return;
     }
 
     const matchingEnabledItems = getMatchingPatterns(enabled, lowercaseUrl);
 
     if (blockerEnabled && matchingEnabledItems.length > 0) {
-      pendingBlockedUrlsByTab.set(tabId, fullUrl);
+      setPendingBlockedUrl(tabId, fullUrl);
       recordBlockedAttempt(fullUrl, matchingEnabledItems, () => {
         const hasDeclarativeRule = matchingEnabledItems.some(item => installedDeclarativeBlockPatterns.has(item));
         if (!hasDeclarativeRule) {
@@ -385,6 +462,22 @@ chrome.webNavigation.onBeforeNavigate.addListener((details) => {
   handleBlockedNavigation(details.tabId, details.url);
 });
 
+chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
+  if (details.frameId !== 0) {
+    return;
+  }
+
+  handleBlockedNavigation(details.tabId, details.url);
+});
+
+chrome.webNavigation.onReferenceFragmentUpdated.addListener((details) => {
+  if (details.frameId !== 0) {
+    return;
+  }
+
+  handleBlockedNavigation(details.tabId, details.url);
+});
+
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url && tab.url.startsWith(chrome.runtime.getURL("blocked.html"))) {
     let blockedUrl = null;
@@ -396,12 +489,11 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     }
 
     if (!blockedUrl) {
-      blockedUrl = pendingBlockedUrlsByTab.get(tabId) || null;
+      blockedUrl = takePendingBlockedUrl(tabId) || null;
     }
 
     if (blockedUrl) {
       chrome.tabs.sendMessage(tabId, { action: 'setBlockedUrl', url: blockedUrl });
-      pendingBlockedUrlsByTab.delete(tabId);
     }
   }
 });
@@ -478,10 +570,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   } else if (message.action === 'getPendingBlockedUrl') {
     const tabId = sender.tab && sender.tab.id;
-    const url = tabId !== undefined ? (pendingBlockedUrlsByTab.get(tabId) || '') : '';
-    if (tabId !== undefined) {
-      pendingBlockedUrlsByTab.delete(tabId);
-    }
+    const url = tabId !== undefined ? takePendingBlockedUrl(tabId) : '';
     sendResponse({
       url
     });
@@ -523,15 +612,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
           const notification = data.enableNotiReblock || false;
 
           // Check if the item is still in the blocked array
-          const stillBlocked = currentBlocked.some(blockedItem => {
-            try {
-              const regex = new RegExp(blockedItem);
-              return regex.test(url);
-            } catch (e) {
-              console.error('Invalid regex pattern');
-              return false;
-            }
-          });
+          const stillBlocked = currentBlocked.some(blockedItem => doesPatternMatchUrl(blockedItem, url.toLowerCase()));
 
           if (stillBlocked) {
             // Add the temporarily unblocked item back to the enabled array
@@ -565,9 +646,8 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 function getDisplayText(pattern) {
   let displayText = pattern;
   if (pattern.startsWith('^https?://')) {
-    displayText = displayText.replace("^https?://+([^:/]+\\.)?", '');
-    displayText = displayText.replace(/\\./g, '.');
-    displayText = displayText.replace("[:/]", '');
+    const websiteDomain = getWebsiteDomainFromPattern(pattern);
+    displayText = websiteDomain || displayText;
   } else if (pattern.startsWith('(?:q|s|search_query)=')) {
     displayText = displayText.replace("(?:q|s|search_query)=(.*", '');
     displayText = displayText.replace("[^&]*)", '');
