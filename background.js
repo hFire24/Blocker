@@ -6,7 +6,6 @@ const RECENT_BLOCKED_ATTEMPT_TTL_MS = 5000;
 let cachedActionIcons = null;
 const pendingBlockedUrlsByTab = new Map();
 const recentBlockedAttemptsByTab = new Map();
-let installedDeclarativeBlockPatterns = new Set();
 let declarativeRuleRefreshInProgress = false;
 let declarativeRuleRefreshQueued = false;
 let declarativeRuleRefreshCallbacks = [];
@@ -241,7 +240,6 @@ function checkDeclarativeRegexSupport(pattern) {
 
 async function buildDeclarativeBlockRules(patterns) {
   const rules = [];
-  const installedPatterns = [];
 
   for (const pattern of patterns.slice(0, MAX_DNR_REGEX_RULES)) {
     try {
@@ -266,13 +264,12 @@ async function buildDeclarativeBlockRules(patterns) {
           resourceTypes: ['main_frame']
         }
       });
-      installedPatterns.push(pattern);
     } catch (e) {
       console.error('Invalid regex pattern');
     }
   }
 
-  return { rules, installedPatterns };
+  return rules;
 }
 
 function finishDeclarativeRuleRefresh() {
@@ -293,7 +290,6 @@ function runDeclarativeBlockRuleRefresh() {
   declarativeRuleRefreshInProgress = true;
 
   if (!chrome.declarativeNetRequest) {
-    installedDeclarativeBlockPatterns = new Set();
     finishDeclarativeRuleRefresh();
     return;
   }
@@ -303,12 +299,11 @@ function runDeclarativeBlockRuleRefresh() {
       blocked: data.blocked || [],
       enabled: data.enabled || [],
       blockerEnabled: data.blockerEnabled !== false
-    })).then(({ rules, installedPatterns }) => {
+    })).then((rules) => {
 
       chrome.declarativeNetRequest.getDynamicRules((existingRules) => {
         if (chrome.runtime.lastError) {
           console.error('Failed to read blocking rules:', chrome.runtime.lastError.message);
-          installedDeclarativeBlockPatterns = new Set();
           finishDeclarativeRuleRefresh();
           return;
         }
@@ -323,9 +318,6 @@ function runDeclarativeBlockRuleRefresh() {
         }, () => {
           if (chrome.runtime.lastError) {
             console.error('Failed to update blocking rules:', chrome.runtime.lastError.message);
-            installedDeclarativeBlockPatterns = new Set();
-          } else {
-            installedDeclarativeBlockPatterns = new Set(installedPatterns);
           }
 
           finishDeclarativeRuleRefresh();
@@ -333,7 +325,6 @@ function runDeclarativeBlockRuleRefresh() {
       });
     }).catch((error) => {
       console.error('Failed to build blocking rules:', error);
-      installedDeclarativeBlockPatterns = new Set();
       finishDeclarativeRuleRefresh();
     });
   });
