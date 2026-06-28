@@ -2,8 +2,10 @@ const ICON_SIZES = [16, 32, 48, 128];
 const DNR_RULE_ID_START = 1000;
 const MAX_DNR_REGEX_RULES = 500;
 const PENDING_BLOCKED_URL_TTL_MS = 30000;
+const RECENT_BLOCKED_ATTEMPT_TTL_MS = 5000;
 let cachedActionIcons = null;
 const pendingBlockedUrlsByTab = new Map();
+const recentBlockedAttemptsByTab = new Map();
 let installedDeclarativeBlockPatterns = new Set();
 let declarativeRuleRefreshInProgress = false;
 let declarativeRuleRefreshQueued = false;
@@ -401,30 +403,29 @@ function clearDisabledBlockTimestamps(matchingBlockedItems, matchingEnabledItems
 
 function redirectToBlockedPage(tabId, fullUrl) {
   setPendingBlockedUrl(tabId, fullUrl);
-  const blockedUrl = `${chrome.runtime.getURL("blocked.html")}?blockedUrl=${encodeURIComponent(fullUrl)}`;
+  const blockedUrl = `${chrome.runtime.getURL("blocked.html")}#blockedUrl=${fullUrl}`;
   chrome.tabs.update(tabId, { url: blockedUrl });
 }
 
-function redirectToBlockedPageIfNeeded(tabId, fullUrl) {
-  setTimeout(() => {
-    chrome.tabs.get(tabId, (tab) => {
-      if (chrome.runtime.lastError || !tab || !tab.url) {
-        return;
-      }
+function shouldRecordBlockedAttempt(tabId, fullUrl) {
+  const recent = recentBlockedAttemptsByTab.get(tabId);
+  if (recent && recent.url === fullUrl && Date.now() - recent.timestamp < RECENT_BLOCKED_ATTEMPT_TTL_MS) {
+    return false;
+  }
 
-      if (tab.url.startsWith(chrome.runtime.getURL("blocked.html"))) {
-        return;
-      }
-
-      redirectToBlockedPage(tabId, fullUrl);
-    });
-  }, 150);
+  recentBlockedAttemptsByTab.set(tabId, {
+    url: fullUrl,
+    timestamp: Date.now()
+  });
+  return true;
 }
 
-function handleBlockedNavigation(tabId, fullUrl) {
+function handleBlockedNavigation(tabId, fullUrl, options = {}) {
   if (tabId < 0 || !isBlockableNavigationUrl(fullUrl)) {
     return;
   }
+
+  const redirectIfMatched = options.redirectIfMatched === true;
 
   chrome.storage.sync.get(['blocked', 'enabled', 'blockerEnabled'], (data) => {
     const blocked = data.blocked || [];
@@ -442,12 +443,17 @@ function handleBlockedNavigation(tabId, fullUrl) {
 
     if (blockerEnabled && matchingEnabledItems.length > 0) {
       setPendingBlockedUrl(tabId, fullUrl);
-      recordBlockedAttempt(fullUrl, matchingEnabledItems, () => {
-        const hasDeclarativeRule = matchingEnabledItems.some(item => installedDeclarativeBlockPatterns.has(item));
-        if (!hasDeclarativeRule) {
-          redirectToBlockedPageIfNeeded(tabId, fullUrl);
+      const afterAttemptRecorded = () => {
+        if (redirectIfMatched) {
+          redirectToBlockedPage(tabId, fullUrl);
         }
-      });
+      };
+
+      if (shouldRecordBlockedAttempt(tabId, fullUrl)) {
+        recordBlockedAttempt(fullUrl, matchingEnabledItems, afterAttemptRecorded);
+      } else {
+        afterAttemptRecorded();
+      }
     } else {
       clearDisabledBlockTimestamps(matchingBlockedItems, matchingEnabledItems, blockerEnabled);
     }
@@ -467,7 +473,9 @@ chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
     return;
   }
 
-  handleBlockedNavigation(details.tabId, details.url);
+  handleBlockedNavigation(details.tabId, details.url, {
+    redirectIfMatched: true
+  });
 });
 
 chrome.webNavigation.onReferenceFragmentUpdated.addListener((details) => {
@@ -475,7 +483,9 @@ chrome.webNavigation.onReferenceFragmentUpdated.addListener((details) => {
     return;
   }
 
-  handleBlockedNavigation(details.tabId, details.url);
+  handleBlockedNavigation(details.tabId, details.url, {
+    redirectIfMatched: true
+  });
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
@@ -495,6 +505,10 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (blockedUrl) {
       chrome.tabs.sendMessage(tabId, { action: 'setBlockedUrl', url: blockedUrl });
     }
+  } else if (changeInfo.status === 'loading' && tab.url) {
+    handleBlockedNavigation(tabId, tab.url, {
+      redirectIfMatched: true
+    });
   }
 });
 
