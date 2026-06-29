@@ -159,7 +159,28 @@ function getWebsiteDomainFromPattern(pattern) {
     .replace(/\(\[\/:\?#\]\|\$\)$/, '')
     .replace(/\\\./g, '.');
 
+  if (!/^[a-z0-9.-]+$/i.test(domainPart)) {
+    return null;
+  }
+
   return domainPart || null;
+}
+
+function getWebsiteDisplayTextFromPattern(pattern) {
+  if (!pattern.startsWith('^https?://')) {
+    return null;
+  }
+
+  let displayText = pattern
+    .replace(/^\^https\?:\/\/\+\(\[\^:\/\]\+\\\.\)\?/, '')
+    .replace(/^\^https\?:\/\/\(\[\^\/\?#\]\*\\\.\)\?/, '')
+    .replace(/\(\[\/:\?#\]\|\$\)$/, '')
+    .replace(/\(\?:\[\/:\?#\]\.\*\)\?\$$/, '')
+    .replace(/\[:\/\]$/, '')
+    .replace(/\\\./g, '.')
+    .replace(/\\\//g, '/');
+
+  return displayText || null;
 }
 
 function doesPatternMatchUrl(pattern, lowercaseUrl) {
@@ -185,22 +206,20 @@ function doesPatternMatchUrl(pattern, lowercaseUrl) {
 function getDeclarativeRegexForPattern(pattern) {
   const websiteDomain = getWebsiteDomainFromPattern(pattern);
   if (!websiteDomain) {
-    return pattern;
+    const fullUrlPattern = pattern.startsWith('^https?://')
+      ? pattern.replace(/\(\[\/:\?#\]\|\$\)$/, '(?:[/:?#].*)?$')
+      : pattern;
+
+    return fullUrlPattern.startsWith('^') ? `(${fullUrlPattern})` : `^(.*${fullUrlPattern}.*)$`;
   }
 
   const escapedDomain = websiteDomain.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return `^(https?://(?:[^/?#]*\\.)?${escapedDomain}(?:[/:?#].*)?)$`;
 }
 
-function getDeclarativeRedirectForPattern(pattern) {
-  if (getWebsiteDomainFromPattern(pattern)) {
-    return {
-      regexSubstitution: `${chrome.runtime.getURL('blocked.html')}#blockedUrl=\\1`
-    };
-  }
-
+function getDeclarativeRedirectForPattern() {
   return {
-    extensionPath: '/blocked.html'
+    regexSubstitution: `${chrome.runtime.getURL('blocked.html')}#blockedUrl=\\1`
   };
 }
 
@@ -651,8 +670,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 function getDisplayText(pattern) {
   let displayText = pattern;
   if (pattern.startsWith('^https?://')) {
-    const websiteDomain = getWebsiteDomainFromPattern(pattern);
-    displayText = websiteDomain || displayText;
+    displayText = getWebsiteDisplayTextFromPattern(pattern) || displayText;
   } else if (pattern.startsWith('(?:q|s|search_query)=')) {
     displayText = displayText.replace("(?:q|s|search_query)=(.*", '');
     displayText = displayText.replace("[^&]*)", '');

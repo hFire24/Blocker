@@ -456,6 +456,10 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\(\[\/:\?#\]\|\$\)$/, '')
       .replace(/\\\./g, '.');
 
+    if (!/^[a-z0-9.-]+$/i.test(domainPart)) {
+      return null;
+    }
+
     return domainPart || null;
   }
 
@@ -493,13 +497,29 @@ document.addEventListener('DOMContentLoaded', () => {
   function getDisplayText(pattern) {
     let displayText = pattern;
     if (pattern.startsWith('^https?://')) {
-      const websiteDomain = getWebsiteDomainFromPattern(pattern);
-      displayText = websiteDomain || displayText;
+      displayText = getWebsiteDisplayTextFromPattern(pattern) || displayText;
     } else if (pattern.startsWith('(?:q|s|search_query)=')) {
       displayText = displayText.replace("(?:q|s|search_query)=(.*", '');
       displayText = displayText.replace("[^&]*)", '');
     }
     return displayText;
+  }
+
+  function getWebsiteDisplayTextFromPattern(pattern) {
+    if (!pattern.startsWith('^https?://')) {
+      return null;
+    }
+
+    let displayText = pattern
+      .replace(/^\^https\?:\/\/\+\(\[\^:\/\]\+\\\.\)\?/, '')
+      .replace(/^\^https\?:\/\/\(\[\^\/\?#\]\*\\\.\)\?/, '')
+      .replace(/\(\[\/:\?#\]\|\$\)$/, '')
+      .replace(/\(\?:\[\/:\?#\]\.\*\)\?\$$/, '')
+      .replace(/\[:\/\]$/, '')
+      .replace(/\\\./g, '.')
+      .replace(/\\\//g, '/');
+
+    return displayText || null;
   }
 
   function addItemToList(pattern, isEnabled, isFavorite, hardMode) {
